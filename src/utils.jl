@@ -134,7 +134,7 @@ end
 #################################################
 # topic 1: TENSORS MANIPULATION UTILITIES
 #################################################
-
+#=
 
 using ChainRulesCore
 
@@ -192,13 +192,13 @@ function ChainRulesCore.rrule(::typeof(combine_tensors_by_layout), tensors, layo
     end
     return y, combine_tensors_by_layout_pullback
 end
-
+=#
 
 
 #################################################
 # topic 2: DIAGRAM PROCESSING RELATED UTILITIES
 #################################################
-
+#=
 """
     space_ids_to_layout(space_ids; space_dims_dict::Dict{String,Int}=Dict("z" => 2))
 
@@ -263,7 +263,7 @@ function space_id_to_space(space_id::SpaceID; spaces_dict=Dict("z" => Z2Space(1,
 
     return reduce(⊗, spaces)
 end
-
+=#
 #################################################
 # topic 3: PRETTY VISUALS
 #################################################

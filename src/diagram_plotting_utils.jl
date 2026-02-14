@@ -13,7 +13,7 @@ using NetworkLayout
 #################################################
 
 """
-    draw_legs_on_segment!(ax, start_pos, end_pos, n_total, leg_labels, activity; marker_size, fontsize, strokewidth=2)
+    draw_legs_on_segment!(ax, start_coordinates, end_coordinates, n_total, leg_labels, activity; marker_size, fontsize, strokewidth=2)
 
 Draw legs along a line segment with active legs showing labels and inactive legs as gray squares.
 
@@ -297,6 +297,7 @@ If node coordinates are provided in the diagram, returns them directly. Otherwis
 
 Arguments:
 - diagram: The TensorDiagram
+- node_repulsion_strength: (Keyword) Strength of node repulsion used in the stress layout algorithm (default: 3.0).
 
 Returns:
 - Array of [x, y] vectors for each node position
@@ -328,8 +329,8 @@ function calculate_node_coordinates(diagram::TensorDiagram; node_repulsion_stren
     boundary_legs = Int[]
     boundary_legs_coordinates = Tuple{Float64,Float64}[]
 
-    n_left = n_right = diagram.boundary_legs_num["horizontal"]
-    n_top = n_bottom = diagram.boundary_legs_num["vertical"]
+    n_left = n_right = diagram.boundary_slots_num["horizontal"]
+    n_top = n_bottom = diagram.boundary_slots_num["vertical"]
     # Configuration for all boundaries: (side_name, n_total, box_dimension, fixed_coord, vary_axis, vary_min)
     boundary_configs = [
         ("left", n_left, box_height, x_min, "y", y_min),
@@ -400,7 +401,7 @@ Arguments:
 - node: The TensorNode to collect leg coordinates from
 - center_x, center_y: Center coordinates of the node
 - width, height: Dimensions of the node
-- pattern: Contraction pattern array mapping legs to contraction pattern indices
+- contraction_pattern: Vector of indices where `contraction_pattern[i]` is the  index for the i-th leg of the node.
 
 Returns:
 - leg_index_to_coordinates: Dict mapping leg indices to (x, y) coordinates
@@ -505,8 +506,8 @@ function plot_tensor_diagram(diagram::TensorDiagram;
     y_min = -box_height / 2
     y_max = box_height / 2
 
-    n_left = n_right = get(diagram.boundary_legs_num, "horizontal", 0)
-    n_top = n_bottom = get(diagram.boundary_legs_num, "vertical", 0)
+    n_left = n_right = get(diagram.boundary_slots_num, "horizontal", 0)
+    n_top = n_bottom = get(diagram.boundary_slots_num, "vertical", 0)
 
     # ===== 2. COMPUTE NODE POSITIONS =====
     node_coordinates = calculate_node_coordinates(diagram; node_repulsion_strength=node_repulsion_strength)

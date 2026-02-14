@@ -83,25 +83,25 @@ end
 
     N = 1000
     for _ = 1:N
-        boundary_legs_num = rand(0:20)
+        boundary_slots_num = rand(0:20)
         max_nodes_num = rand(1:10)
         max_leg_num = rand(1:8)
 
         # Expected error condition: not enough slots to fit boundary legs
         # Same logic as in generate_random_tensor_diagram
-        min_nodes_required = max(ceil(Int, boundary_legs_num / max_leg_num), 1)
+        min_nodes_required = max(ceil(Int, boundary_slots_num / max_leg_num), 1)
         expect_error = min_nodes_required > max_nodes_num
 
         if expect_error
             try
-                generate_random_tensor_diagram(boundary_legs_num; max_nodes_num=max_nodes_num, max_leg_num=max_leg_num)
+                generate_random_tensor_diagram(boundary_slots_num; max_nodes_num=max_nodes_num, max_leg_num=max_leg_num)
                 # If we are here, no error was thrown.
                 error_handling = false
             catch
                 # Expected error caught
             end
         else
-            d = generate_random_tensor_diagram(boundary_legs_num; max_nodes_num=max_nodes_num, max_leg_num=max_leg_num)
+            d = generate_random_tensor_diagram(boundary_slots_num; max_nodes_num=max_nodes_num, max_leg_num=max_leg_num)
             check_results = check_diagram_consistency(d)
             if !all(values(check_results))
                 diagram_consistency = false
@@ -188,17 +188,17 @@ end
     bubble_counter = 0
     N = 1000
     for _ = 1:N
-        boundary_legs_num = rand(0:20)
+        boundary_slots_num = rand(0:20)
         max_nodes_num = rand(1:10)
         max_leg_num = rand(1:8)
 
-        min_nodes_required = max(ceil(Int, boundary_legs_num / max_leg_num), 1)
+        min_nodes_required = max(ceil(Int, boundary_slots_num / max_leg_num), 1)
         expect_error = min_nodes_required > max_nodes_num
         if expect_error
             continue
         end
 
-        d1 = generate_random_tensor_diagram(boundary_legs_num; max_nodes_num=max_nodes_num, max_leg_num=max_leg_num)
+        d1 = generate_random_tensor_diagram(boundary_slots_num; max_nodes_num=max_nodes_num, max_leg_num=max_leg_num)
         _, no_bubbles = standardize_diagram(d1)
 
         diagram_is_empty = length(d1.nodes) == 0

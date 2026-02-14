@@ -104,19 +104,19 @@ end
 
 
 """
-    generate_random_tensor_diagram(boundary_legs_num::Int; max_nodes_num::Int=5, max_leg_num::Int=5)
+    generate_random_tensor_diagram(boundary_slots_num::Int; max_nodes_num::Int=5, max_leg_num::Int=5)
 
 Generates a random TensorDiagram with a specified total number of boundary legs.
 Follows a specific construction strategy to ensure connectivity and valid boundary placement.
 
 # Arguments
-- `boundary_legs_num::Int`: Total number of negative indices (boundary legs) to place.
+- `boundary_slots_num::Int`: Total number of negative indices (boundary legs) to place.
 - `max_nodes_num::Int`: Maximum number of nodes to generate (randomly picks 1 to max).
 - `max_leg_num::Int`: Maximum number of legs per node.
 
 # Construction Strategy
 1. Determine `nodes_num` randomly from 1 to `max_nodes_num`.
-2. Generate node leg counts such that total legs > `boundary_legs_num` and (total - boundary) is even.
+2. Generate node leg counts such that total legs > `boundary_slots_num` and (total - boundary) is even.
 3. Distribute negative indices (-1, -2, ...) into the node leg slots, preferring nodes with multiple available slots to encourage connectivity.
 4. Connect remaining slots with unique internal indices (positive integers), minimizing self-loops by preferring to connect different nodes.
 5. Create `TensorNode` objects for each node:
@@ -128,14 +128,14 @@ Follows a specific construction strategy to ensure connectivity and valid bounda
 # Returns
 - A `TensorDiagram` object.
 """
-function generate_random_tensor_diagram(boundary_legs_num::Int; max_nodes_num::Int=5, max_leg_num::Int=5)
+function generate_random_tensor_diagram(boundary_slots_num::Int; max_nodes_num::Int=5, max_leg_num::Int=5)
 
     # 1. Pick number of nodes
     # Ensure it is theoretically possible to satisfy constraints:
-    # We need total_slots >= boundary_legs_num.
-    min_nodes_required = max(ceil(Int, boundary_legs_num / max_leg_num), 1)
+    # We need total_slots >= boundary_slots_num.
+    min_nodes_required = max(ceil(Int, boundary_slots_num / max_leg_num), 1)
     if min_nodes_required > max_nodes_num
-        error("Impossible constraints: max_nodes_num ($max_nodes_num) * max_leg_num ($max_leg_num) < boundary_legs_num ($boundary_legs_num)")
+        error("Impossible constraints: max_nodes_num ($max_nodes_num) * max_leg_num ($max_leg_num) < boundary_slots_num ($boundary_slots_num)")
     end
 
     nodes_num = rand(min_nodes_required:max_nodes_num)
@@ -147,7 +147,7 @@ function generate_random_tensor_diagram(boundary_legs_num::Int; max_nodes_num::I
 
     node_leg_counts = [rand(1:max_leg_num) for _ in 1:nodes_num]
     total_slots = sum(node_leg_counts)
-    if (total_slots - boundary_legs_num) % 2 != 0
+    if (total_slots - boundary_slots_num) % 2 != 0
         candidates = findall(x -> x < max_leg_num, node_leg_counts)
 
         if isempty(candidates)
@@ -170,7 +170,7 @@ function generate_random_tensor_diagram(boundary_legs_num::Int; max_nodes_num::I
 
 
     # Increment leg counts if we don't have enough slots
-    while sum(node_leg_counts) < boundary_legs_num
+    while sum(node_leg_counts) < boundary_slots_num
         # Find nodes that can accept more legs
         candidates = findall(x -> x < max_leg_num, node_leg_counts)
         # Increment pair of legs
@@ -204,10 +204,10 @@ function generate_random_tensor_diagram(boundary_legs_num::Int; max_nodes_num::I
     end
     shuffle!(available_slots)
 
-    # 3. Distribute numbers -1, -2, ... -boundary_legs_num
+    # 3. Distribute numbers -1, -2, ... -boundary_slots_num
     # We assign them randomly, preferring slots from nodes that have at least one other slot available to allow for internal connections later.
     assigned_boundary_indices = Int[]
-    for i in 1:boundary_legs_num
+    for i in 1:boundary_slots_num
         # Prefer slots from nodes that have at least one other slot available (to allow for internal connection later)
         candidate_idx = findfirst(slot -> count(s -> s[1] == slot[1], available_slots) > 1, available_slots)
 
@@ -273,13 +273,13 @@ function generate_random_tensor_diagram(boundary_legs_num::Int; max_nodes_num::I
     end
 
     # Finalize structure
-    boundary_legs_num_dict = Dict{String,Int}()
-    boundary_legs_num_dict["horizontal"] = max(length(boundary_legs["left"]), length(boundary_legs["right"]))
-    boundary_legs_num_dict["vertical"] = max(length(boundary_legs["top"]), length(boundary_legs["bottom"]))
+    boundary_slots_num_dict = Dict{String,Int}()
+    boundary_slots_num_dict["horizontal"] = max(length(boundary_legs["left"]), length(boundary_legs["right"]))
+    boundary_slots_num_dict["vertical"] = max(length(boundary_legs["top"]), length(boundary_legs["bottom"]))
 
     for side in sides
         n_legs = length(boundary_legs[side])
-        n_pos = side in ["left", "right"] ? boundary_legs_num_dict["horizontal"] : boundary_legs_num_dict["vertical"]
+        n_pos = side in ["left", "right"] ? boundary_slots_num_dict["horizontal"] : boundary_slots_num_dict["vertical"]
         boundary_legs_posidx[side] = shuffle(collect(1:n_pos))[1:n_legs]
     end
 
@@ -288,7 +288,7 @@ function generate_random_tensor_diagram(boundary_legs_num::Int; max_nodes_num::I
     return TensorDiagram(
         nodes=nodes,
         contraction_pattern=contraction_pattern,
-        boundary_legs_num=boundary_legs_num_dict,
+        boundary_slots_num=boundary_slots_num_dict,
         boundary_legs=boundary_legs,
         boundary_legs_posidx=boundary_legs_posidx,
         labels=labels
@@ -303,7 +303,7 @@ function add_random_dangling_indices!(diag::TensorDiagram; max_num_dangling::Int
     nni() = generate_nfi!(new_neg_index_cnt; dir="negative")
 
 
-    free_slots_num = diag.boundary_legs_num["horizontal"] * 2 + diag.boundary_legs_num["vertical"] * 2 - length(boundary_legs)
+    free_slots_num = diag.boundary_slots_num["horizontal"] * 2 + diag.boundary_slots_num["vertical"] * 2 - length(boundary_legs)
 
     if free_slots_num < 1
         return false
@@ -315,7 +315,7 @@ function add_random_dangling_indices!(diag::TensorDiagram; max_num_dangling::Int
 
     free_slots = Tuple{String,Int}[]
     for (side, positions) in diag.boundary_legs_posidx
-        leg_num_on_side = side in ["left", "right"] ? diag.boundary_legs_num["horizontal"] : diag.boundary_legs_num["vertical"]
+        leg_num_on_side = side in ["left", "right"] ? diag.boundary_slots_num["horizontal"] : diag.boundary_slots_num["vertical"]
 
         free_slots_on_side = setdiff(1:leg_num_on_side, positions)
 

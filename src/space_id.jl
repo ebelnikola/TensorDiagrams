@@ -113,7 +113,7 @@ function get_space_id(diag; side="top")
     legs_posidx = legs_posidx[perm]
 
     slots_key = (side == "left" || side == "right") ? "horizontal" : "vertical"
-    slots_number = diag.boundary_legs_num[slots_key]
+    slots_number = diag.boundary_slots_num[slots_key]
 
     return SpaceID(legs_labels, legs_posidx, slots_number)
 end

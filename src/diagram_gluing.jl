@@ -47,8 +47,8 @@ function glue_diagrams(d1::TensorDiagram, d2::TensorDiagram, sides::Vector{Strin
     # 1.2 Spaces compatibility check
     # 1.2.1 Checking that boundaries have the same number of slots so that space IDs mean the same thing
 
-    nodes_num_1 = ishorizontal_1 ? d1.boundary_legs_num["horizontal"] : d1.boundary_legs_num["vertical"]
-    nodes_num_2 = ishorizontal_2 ? d2.boundary_legs_num["horizontal"] : d2.boundary_legs_num["vertical"]
+    nodes_num_1 = ishorizontal_1 ? d1.boundary_slots_num["horizontal"] : d1.boundary_slots_num["vertical"]
+    nodes_num_2 = ishorizontal_2 ? d2.boundary_slots_num["horizontal"] : d2.boundary_slots_num["vertical"]
 
     if nodes_num_1 != nodes_num_2
         throw(ArgumentError("Cannot glue $(sides[1]) and $(sides[2]) sides of diagrams: number of legs do not match (d1 has $nodes_num_1 legs, d2 has $nodes_num_2 legs)."))
@@ -176,9 +176,9 @@ function glue_diagrams(d1::TensorDiagram, d2::TensorDiagram, sides::Vector{Strin
 
     # 3.2.2 constructing new boundary dicts
 
-    new_num_of_hor_bound_slots = ishorizontal_1 ? d1.boundary_legs_num["horizontal"] : d1.boundary_legs_num["horizontal"] + d2.boundary_legs_num["horizontal"]
-    new_num_of_ver_bound_slots = ishorizontal_1 ? d1.boundary_legs_num["vertical"] + d2.boundary_legs_num["vertical"] : d1.boundary_legs_num["vertical"]
-    new_boundary_legs_num = Dict("horizontal" => new_num_of_hor_bound_slots, "vertical" => new_num_of_ver_bound_slots)
+    new_num_of_hor_bound_slots = ishorizontal_1 ? d1.boundary_slots_num["horizontal"] : d1.boundary_slots_num["horizontal"] + d2.boundary_slots_num["horizontal"]
+    new_num_of_ver_bound_slots = ishorizontal_1 ? d1.boundary_slots_num["vertical"] + d2.boundary_slots_num["vertical"] : d1.boundary_slots_num["vertical"]
+    new_boundary_slots_num = Dict("horizontal" => new_num_of_hor_bound_slots, "vertical" => new_num_of_ver_bound_slots)
 
     new_boundary_legs = Dict{String,Vector{Int}}()
     new_boundary_legs_posidx = Dict{String,Vector{Int}}()
@@ -192,14 +192,14 @@ function glue_diagrams(d1::TensorDiagram, d2::TensorDiagram, sides::Vector{Strin
 
     # Now, if we do horizontal gluing (□□) we should shift the posidx on 
     # top and bottom sides for the diagram that will be on the right side 
-    hor_shift_d1 = ishorizontal_1 ? (d1_pos == "left" ? 0 : d2.boundary_legs_num["vertical"]) : 0
-    hor_shift_d2 = ishorizontal_1 ? (d2_pos == "left" ? 0 : d1.boundary_legs_num["vertical"]) : 0
+    hor_shift_d1 = ishorizontal_1 ? (d1_pos == "left" ? 0 : d2.boundary_slots_num["vertical"]) : 0
+    hor_shift_d2 = ishorizontal_1 ? (d2_pos == "left" ? 0 : d1.boundary_slots_num["vertical"]) : 0
 
     # same for vertical gluing □
     #                          □
     isvertical = !ishorizontal_1
-    ver_shift_d1 = isvertical ? (d1_pos == "bottom" ? 0 : d2.boundary_legs_num["horizontal"]) : 0
-    ver_shift_d2 = isvertical ? (d2_pos == "bottom" ? 0 : d1.boundary_legs_num["horizontal"]) : 0
+    ver_shift_d1 = isvertical ? (d1_pos == "bottom" ? 0 : d2.boundary_slots_num["horizontal"]) : 0
+    ver_shift_d2 = isvertical ? (d2_pos == "bottom" ? 0 : d1.boundary_slots_num["horizontal"]) : 0
 
     # having shifts arranged we can populate new boundary legs dicts
     for side in ["top", "bottom", "left", "right"]
@@ -242,7 +242,7 @@ function glue_diagrams(d1::TensorDiagram, d2::TensorDiagram, sides::Vector{Strin
         contraction_pattern=new_contraction_pattern,
         boundary_legs=new_boundary_legs,
         boundary_legs_posidx=new_boundary_legs_posidx,
-        boundary_legs_num=new_boundary_legs_num,
+        boundary_slots_num=new_boundary_slots_num,
         labels=new_labels,
         factor=new_factor,
         node_coordinates=new_coordinates,

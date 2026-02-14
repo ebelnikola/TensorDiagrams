@@ -1,4 +1,3 @@
-# TODO: Migrate to Dictionaries.jl to handle dictionaries
 ##################################################################
 # TOC
 # topic -1:          COLOR PALETTE
@@ -69,42 +68,121 @@ function load_config(filename::String)
 end
 
 ##################################################################
-# topic 1: TensorNode AND TensorDiagram DEFINITIONS AND PLOTTING   
+# topic 1: TensorNode AND TensorDiagram BASICS
 ##################################################################
 
 ##################################################################
 # topic 1.1: DEFINITIONS 
 ##################################################################
+"""
+    TensorNode
 
+A structure representing a single tensor in a tensor network diagram.
 
+# Fields
+
+### Essential Parameters
+- `name::String`: The name of the tensor.
+- `legs::Dict{String,Array{Int,1}}`: A dictionary mapping sides to leg indices.
+    - Allowed keys: "left", "right", "top", "bottom".
+    - Values: Arrays of integers numbering the legs of the tensor, i.e. leg ordinals. 
+
+### Diagram Completion Parameters
+- `allowed_labels::Array{Array{String,1},1}`: Constraints on the vector space labels for each leg.
+    - An array of arrays, where the i-th element corresponds to the i-th leg.
+    - Each inner array contains the valid space labels (strings) that the leg can take.
+    - Empty by default. 
+
+- `allowed_label_combinations::Array{Array{String,1},1}`: A list of specific combinations of labels that are valid for the entire tensor.
+    - If non-empty, the tensor's legs can only have labels that form one of these combinations.
+    - Empty by default.
+- `forbidden_label_combinations::Array{Array{String,1},1}`: A list of specific combinations of labels that are forbidden.
+    - The tensor cannot have labels that form any of these combinations.
+    - Empty by default.
+
+### TensorKit Related Properties
+- `adjoint::Bool`: Whether this node is the adjoint (conjugate transpose) of some original tensor. Default is `false`.
+- `dual::Vector{Bool}`: A boolean vector indicating if each leg is in the dual space.
+    - Length must match the total number of legs.
+- `flipped::Vector{Bool}`: A boolean vector indicating if the arrow direction of each leg was flipped using `flip` from TensorKit.
+    - Length must match the total number of legs.
+- `out_legs_num::Int`: The number of outgoing legs.
+    - Default is the total number of legs, i.e, all legs are outgoing.
+
+### Plotting Parameters
+- `hor_ref::Bool`: Indicates if the node has been horizontally reflected. Default `false`.
+- `ver_ref::Bool`: Indicates if the node has been vertically reflected. Default `false`.
+- `color::RGBA`: The fill color of the node in plots. Default `YELLOW`, see "palette.jl".
+- `width::Union{Nothing,Float64}`: Explicit width of the node for plotting. If `nothing`, width is calculated automatically.
+- `height::Union{Nothing,Float64}`: Explicit height of the node for plotting. If `nothing`, height is calculated automatically.
+"""
 @kwdef mutable struct TensorNode
-    # Essential parameters
+    # Required parameters
     name::String
     legs::Dict{String,Array{Int,1}}
-    allowed_labels::Array{Array{String,1},1}
+    # Paramters for diagram completions
+    allowed_labels::Array{Array{String,1},1} = Array{Array{String,1},1}[]
     allowed_label_combinations::Array{Array{String,1},1} = Array{Array{String,1},1}[]
     forbidden_label_combinations::Array{Array{String,1},1} = Array{Array{String,1},1}[]
-    hor_ref::Bool = false
-    ver_ref::Bool = false
     # TensorKit related properties
     adjoint::Bool = false
     dual::Vector{Bool} = zeros(Bool, maximum(maximum.(values(legs))))
     flipped::Vector{Bool} = zeros(Bool, maximum(maximum.(values(legs))))
     out_legs_num::Int = maximum(maximum.(values(legs)))
     # Plotting parameters
+    hor_ref::Bool = false
+    ver_ref::Bool = false
     color::RGBA = YELLOW
     width::Union{Nothing,Float64} = nothing
     height::Union{Nothing,Float64} = nothing
 end
 
+"""
+    TensorDiagram
+
+A structure representing a tensor network diagram, consisting of connected tensor nodes with legs decorated by labels indicating vector subspaces. Also contains a factor string, which should be a valid Julia expression that can be evaluated to a number. 
+
+# Fields
+
+### Required Parameters
+- `nodes::Array{TensorNode,1}`: The list of `TensorNode` objects comprising the diagram.
+- `contraction_pattern::Array{Array{Int,1},1}`: Specifies how the nodes are connected in the ncon fashion.
+    - Each element corresponds to a node (in the same order as `nodes`).
+    - The i-th element labels the legs of i-th node by pattern indices: positive indices for legs that are contracted (internal edges) and negative indices for legs that connect to the boundary.
+- `boundary_slots_num::Dict{String,Int}`: Specifies the number of slots on each boundary side. A slot is a position where a leg can be attached.
+    - Allowed keys: "left", "right", "top", "bottom".
+- `boundary_legs::Dict{String,Array{Int,1}}`: Maps boundary sides to the pattern indices of the legs ending there.
+    - Allowed keys: "left", "right", "top", "bottom".
+    - Values: Arrays of pattern indices present on that boundary.
+- `boundary_legs_posidx::Dict{String,Array{Int,1}}`: Specifies the geometric ordering of legs on the boundary.
+    - Allowed keys: "left", "right", "top", "bottom".
+    - Values: Arrays of integers from 1 to the number of slots on that side, indicating the position index, i.e. the slot ordinal, of each leg on its respective side. The slots are always ordered from bottom to top and from left to right. 
+
+### Decorations
+- `labels::Dict{Int,String}`: A dictionary mapping pattern indices to string labels.
+    - These labels are meant to indicate particular subspaces of the total leg space. 
+
+### Factor
+- `factor::String`: A symbolic scalar factor multiplying the diagram. Expressed as a string that should be a valid Julia expression. Default "1.0".
+
+### Plotting Parameters
+- `node_coordinates::Union{Nothing,Array{Union{Vector{Float64},Missing},1}}`: Explicit 2D coordinates for the centers of the nodes.
+    - If `nothing`, layout is computed automatically.
+    - Supports `missing` for individual nodes to let the layout engine place them.
+    - If not `nothing`, should contain cooridnates for each tensor. Otherwise the diagram will be rendered incorrectly. 
+- `width::Float64`: The total width of the canvas/box representing the diagram boundaries. Default 10.0.
+- `height::Float64`: The total height of the canvas/box representing the diagram boundaries. Default 10.0.
+"""
 @kwdef mutable struct TensorDiagram
-    # Essential parameters
+    # Required parameters
     nodes::Array{TensorNode,1}
     contraction_pattern::Array{Array{Int,1},1}
-    boundary_legs_num::Dict{String,Int}
+    boundary_slots_num::Dict{String,Int} # TODO: update the code to support keys left,  top, right, bottom, instead of "horizontal" and "vertical"
     boundary_legs::Dict{String,Array{Int,1}}
     boundary_legs_posidx::Dict{String,Array{Int,1}}
+    # Decorations
     labels::Dict{Int,String} = Dict{Int,String}()
+    # Factor
     factor::String = "1.0"
     # Plotting parameters
     node_coordinates::Union{Nothing,Array{Union{Vector{Float64},Missing},1}} = nothing
@@ -123,8 +201,6 @@ function ==(node1::TensorNode, node2::TensorNode)
            node1.allowed_labels == node2.allowed_labels &&
            node1.allowed_label_combinations == node2.allowed_label_combinations &&
            node1.forbidden_label_combinations == node2.forbidden_label_combinations &&
-           node1.hor_ref == node2.hor_ref &&
-           node1.ver_ref == node2.ver_ref &&
            node1.adjoint == node2.adjoint &&
            node1.dual == node2.dual &&
            node1.flipped == node2.flipped &&
@@ -141,8 +217,8 @@ Equivalence is determined by standardizing both diagrams using `standardize_diag
 If standardization fails for either diagram (e.g. unreachable internal indices), this function returns `false`.
 
 # Returns
-- `true` if the diagrams are equivalent.
-- `false` otherwise.
+- `true` if the diagrams are equivalent and all internal indices are reachable from the boundary.
+- `false` otherwise. 
 """
 function ==(diag1::TensorDiagram, diag2::TensorDiagram)
     std_diag1, success1 = standardize_diagram(diag1)
@@ -153,39 +229,9 @@ function ==(diag1::TensorDiagram, diag2::TensorDiagram)
         return false
     end
 
-    # Check that sets of indices are the same
-    indices1 = Set(vcat(std_diag1.contraction_pattern...))
-    union!(indices1, vcat(values(std_diag1.boundary_legs)...))
-
-    indices2 = Set(vcat(std_diag2.contraction_pattern...))
-    union!(indices2, vcat(values(std_diag2.boundary_legs)...))
-
-    if indices1 != indices2
-        return false
-    end
-
-    # Populate labels with question marks for missing keys
-    for idx in indices1
-        if !haskey(std_diag1.labels, idx)
-            std_diag1.labels[idx] = "?"
-        end
-        if !haskey(std_diag2.labels, idx)
-            std_diag2.labels[idx] = "?"
-        end
-    end
-
-    perm = sortperm(std_diag1.contraction_pattern)
-    std_diag1.nodes = std_diag1.nodes[perm]
-    std_diag1.contraction_pattern = std_diag1.contraction_pattern[perm]
-
-    perm = sortperm(std_diag2.contraction_pattern)
-    std_diag2.nodes = std_diag2.nodes[perm]
-    std_diag2.contraction_pattern = std_diag2.contraction_pattern[perm]
-
-
     return std_diag1.nodes == std_diag2.nodes &&
            std_diag1.contraction_pattern == std_diag2.contraction_pattern &&
-           std_diag1.boundary_legs_num == std_diag2.boundary_legs_num &&
+           std_diag1.boundary_slots_num == std_diag2.boundary_slots_num &&
            std_diag1.boundary_legs == std_diag2.boundary_legs &&
            std_diag1.boundary_legs_posidx == std_diag2.boundary_legs_posidx &&
            std_diag1.labels == std_diag2.labels &&
@@ -248,7 +294,7 @@ end
 Create a horizontally reflected version of the TensorNode.
 - Swaps left and right legs
 - Reverses order of top and bottom legs
-- Sets hor_ref=true
+- Toggles the `hor_ref` flag
 
 # Arguments:
 - node: The TensorNode to reflect
@@ -296,7 +342,7 @@ end
 Create a vertically reflected version of the TensorNode.
 - Swaps top and bottom legs
 - Reverses order of left and right legs
-- Sets ver_ref=true
+- Toggles the `ver_ref` flag
 
 # Arguments:
 - node: The TensorNode to reflect
@@ -369,19 +415,72 @@ end
 #########################################################
 
 import TensorKit: flip
+
+"""
+    flip!(node::TensorNode, idx::Int)
+
+Flip the direction of a specific leg of a `TensorNode` in place.
+Updates the `flipped` flag for the given index.
+
+# Arguments
+- `node::TensorNode`: The node to modify.
+- `idx::Int`: The index of the leg to flip.
+
+# Returns
+- `node`: The modified node.
+"""
 function flip!(node::TensorNode, idx::Int)
     node.flipped[idx] = !node.flipped[idx]
     return node
 end
+
+"""
+    flip(node::TensorNode, idx::Int)
+
+Create a copy of a `TensorNode` with a specific leg flipped.
+
+# Arguments
+- `node::TensorNode`: The node to copy and modify.
+- `idx::Int`: The index of the leg to flip.
+
+# Returns
+- A new `TensorNode` with the flipped leg.
+"""
 function flip(node::TensorNode, idx::Int)
     new_node = copy(node)
     flip!(new_node, idx)
     return new_node
 end
+
+"""
+    flip!(node::TensorNode, indicies::Vector{Int})
+
+Flip the direction of multiple legs of a `TensorNode` in place.
+
+# Arguments
+- `node::TensorNode`: The node to modify.
+- `indicies::Vector{Int}`: A list of leg indices to flip.
+
+# Returns
+- `node`: The modified node.
+"""
 function flip!(node::TensorNode, indicies::Vector{Int})
     node.flipped[indicies] .= .!node.flipped[indicies]
     return node
 end
+
+"""
+    flip(node::TensorNode, indicies::Vector{Int})
+
+Create a copy of a `TensorNode` with multiple legs flipped.
+
+# Arguments
+- `node::TensorNode`: The node to copy and modify.
+- `indicies::Vector{Int}`: A list of leg indices to flip.
+
+# Returns
+- A new `TensorNode` with the flipped legs.
+"""
 function flip(node::TensorNode, indicies::Vector{Int})
     new_node = copy(node)
     flip!(new_node, indicies)
@@ -393,6 +492,24 @@ end
 #########################################################
 
 
+"""
+    adjoint(node::TensorNode)
+
+Compute the adjoint of a `TensorNode`.
+This involves:
+1. Adding or removing a prime ("'") from the name.
+2. Toggling the `adjoint` flag.
+3. Swapping input and output legs (reordering `legs`).
+4. Reordering properties (`allowed_labels`, `dual`, `flipped`) to match the new leg order.
+5. Updating `out_legs_num`.
+
+# Arguments
+- `node::TensorNode`: The node to take the adjoint of.
+
+# Returns
+- `new_node::TensorNode`: The adjoint node.
+- `old_legs_to_new::Vector{Int}`: Validation permutation vector mapping old leg indices to new leg indices.
+"""
 function adjoint(node::TensorNode)
     new_node = copy(node)
 
@@ -443,11 +560,23 @@ end
 # topic 3.1: COPYING
 #########################################################
 
+"""
+    copy(diag::TensorDiagram)
+
+Create a deep copy of a `TensorDiagram`.
+All mutable fields (nested arrays, dictionaries) are deep copied to ensure independence.
+
+# Arguments
+- `diag::TensorDiagram`: The diagram to copy.
+
+# Returns
+- A new independent `TensorDiagram` instance.
+"""
 function copy(diag::TensorDiagram)
     return TensorDiagram(
         nodes=deepcopy.(diag.nodes), # Nested structure (Array of TensorNodes), requires deepcopy
         contraction_pattern=deepcopy(diag.contraction_pattern), # Nested structure (Array of Arrays) requires deepcopy
-        boundary_legs_num=copy(diag.boundary_legs_num), # Not nested (Dict of Ints), copy is enough
+        boundary_slots_num=copy(diag.boundary_slots_num), # Not nested (Dict of Ints), copy is enough
         boundary_legs=deepcopy(diag.boundary_legs), # Nested structure (Dict of Arrays), requires deepcopy
         boundary_legs_posidx=deepcopy(diag.boundary_legs_posidx), # Nested structure (Dict of Arrays), requires deepcopy
         labels=copy(diag.labels),# Not nested (Dict of Strings), copy is enough  
@@ -618,7 +747,7 @@ function reflect(diag::TensorDiagram; dir="vertical")
 
     flipping_sides = dir == "vertical" ? ["top", "bottom"] : ["left", "right"]
     reversing_sides = dir == "vertical" ? ["left", "right"] : ["top", "bottom"]
-    rev_sides_num = dir == "vertical" ? diag.boundary_legs_num["horizontal"] : diag.boundary_legs_num["vertical"]
+    rev_sides_num = dir == "vertical" ? diag.boundary_slots_num["horizontal"] : diag.boundary_slots_num["vertical"]
 
 
     diag_r.boundary_legs[flipping_sides[1]] = get(diag.boundary_legs, flipping_sides[2], Int[])
@@ -649,10 +778,21 @@ include("diagram_completion.jl")
 # topic 3.6: ADJOINT OF A DIAGRAM
 #########################################################
 
-# we get an adoint of diagram by taking adjoints of all 
-# nodes and accounting for the leg permutations that 
-# occur when taking adjoint of individual nodes.
 
+"""
+    adjoint(diag::TensorDiagram)
+
+Compute the adjoint of a `TensorDiagram`.
+This involves:
+1. Taking the adjoint of all constituent nodes.
+2. Updating the contraction pattern to account for the leg permutations incurred by node adjoints.
+
+# Arguments
+- `diag::TensorDiagram`: The diagram to take the adjoint of.
+
+# Returns
+- A new `TensorDiagram` representing the adjoint.
+"""
 function adjoint(diag::TensorDiagram)
     diag_a = copy(diag)
 
@@ -683,8 +823,7 @@ include("diagram_gluing.jl")
 #########################################################
 # topic 4: TensorDiagram PROCESSING
 #########################################################
-import TensorOperations
-using LinearAlgebra: I
+
 
 #########################################################
 # topic 4.1: DIAGRAM TO CODE

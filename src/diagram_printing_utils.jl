@@ -30,8 +30,8 @@ function pretty_format(diag::TensorDiagram; pad_to::Int=0)
     _print_aligned_columns(io, [node_names, pattern_strs])
 
     # 2. Boundary Legs Num
-    h_num = get(diag.boundary_legs_num, "horizontal", 0)
-    v_num = get(diag.boundary_legs_num, "vertical", 0)
+    h_num = get(diag.boundary_slots_num, "horizontal", 0)
+    v_num = get(diag.boundary_slots_num, "vertical", 0)
     println(io, "  Hor. boundary legs num: ", h_num)
     println(io, "  Ver. boundary legs num: ", v_num)
     println(io, "")

@@ -86,8 +86,8 @@ Performs a series of consistency checks on a `TensorDiagram` and returns a dicti
 - `check6`: All boundary indices are unique.
 - `check7`: All negative indices in the contraction pattern are present in boundary legs.
 - `check8`: All boundary legs have negative indices.
-- `check9`: `boundary_legs_num` contains the "horizontal" key.
-- `check10`: `boundary_legs_num` contains the "vertical" key.
+- `check9`: `boundary_slots_num` contains the "horizontal" key.
+- `check10`: `boundary_slots_num` contains the "vertical" key.
 - `check11`: Keys of `boundary_legs` are a subset of ["left", "right", "top", "bottom"].
 - `check12`: Keys of `boundary_legs_posidx` match keys of `boundary_legs`.
 - `check13`: Length of legs matches length of position indices (per side).
@@ -139,8 +139,8 @@ function check_diagram_consistency(diag::TensorDiagram)
 
     results["check8"] = all(boundary_indices .< 0)
 
-    results["check9"] = haskey(diag.boundary_legs_num, "horizontal")
-    results["check10"] = haskey(diag.boundary_legs_num, "vertical")
+    results["check9"] = haskey(diag.boundary_slots_num, "horizontal")
+    results["check10"] = haskey(diag.boundary_slots_num, "vertical")
     results["check11"] = keys(diag.boundary_legs) ⊆ ["left", "right", "top", "bottom"]
     results["check12"] = keys(diag.boundary_legs_posidx) == keys(diag.boundary_legs)
 
@@ -151,10 +151,10 @@ function check_diagram_consistency(diag::TensorDiagram)
         posidx = get(diag.boundary_legs_posidx, side, Int[])
 
         results["check13 $side"] = length(legs) == length(posidx)
-        results["check14 $side"] = length(legs) <= diag.boundary_legs_num[num_key]
+        results["check14 $side"] = length(legs) <= diag.boundary_slots_num[num_key]
         if !isempty(posidx)
             results["check15 $side"] = minimum(posidx) >= 1
-            results["check16 $side"] = maximum(posidx) <= diag.boundary_legs_num[num_key]
+            results["check16 $side"] = maximum(posidx) <= diag.boundary_slots_num[num_key]
         else
             results["check15 $side"] = true
             results["check16 $side"] = true
