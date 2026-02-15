@@ -53,7 +53,7 @@ function generate_random_tensor_node(num_legs::Int, name::String; min_num_allowe
     if max_num_of_allowed_rnd_labels == 0 && isnothing(necessary_labels)
         return TensorNode(
             name=name,
-            color=rand(PALETTE),
+            color=set_alpha(rand(PALETTE), 0.6),
             legs=legs,
         )
     end
@@ -71,10 +71,14 @@ function generate_random_tensor_node(num_legs::Int, name::String; min_num_allowe
 
     return TensorNode(
         name=name,
-        color=rand(PALETTE),
+        color=set_alpha(rand(PALETTE), 0.6),
         legs=legs,
         allowed_labels=allowed_labels,
     )
+end
+
+function set_alpha(color::RGBA, alpha)
+    return RGBA(color.r, color.g, color.b, alpha)
 end
 
 """

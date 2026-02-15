@@ -74,7 +74,7 @@ Pkg.add(url="https://github.com/ebelnikola/TensorDiagrams")
 
 ## Configuration
 
-The package uses YAML configuration files to define valid labels:
+The package uses YAML configuration files to define names of subspaces:
 
 ```yaml
 INFINITE_LABELS:
@@ -84,6 +84,12 @@ FINITE_LABELS:
   - z1
   - z2
 ```
+
+The package differentiates between two classes of subspaces:
+- **Infinite subspaces** - rendered with red colored legs in visualizations
+- **Finite subspaces** - rendered with green colored legs in visualizations
+
+This distinction is useful for rigorous analysis of tensor networks. 
 
 Load configuration with:
 ```julia
