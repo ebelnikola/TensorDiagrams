@@ -1,11 +1,14 @@
 using Test
 using Aqua
-include("../src/TensorDiagrams.jl")
+using Random
+using TensorDiagrams
+#include("../src/TensorDiagrams.jl")
 
 #Aqua.test_stale_deps(TensorDiagrams)
 
 load_config((@__DIR__) * "/tests_config.yml")
-
+INFINITE_LABELS = TensorDiagrams.INFINITE_LABELS
+FINITE_LABELS = TensorDiagrams.FINITE_LABELS
 ###################################################################
 # topic 1: LOADER AND RANDOM GENERATORS
 ###################################################################
@@ -163,12 +166,12 @@ end
             metadata_ignorance = false
         end
 
-        T1r = hor_reflection(T1)
+        T1r = reflect(T1; dir="horizontal")
 
         if T1 != T1r
             reflection_equality = false
         end
-        T1r2 = ver_reflection(T1)
+        T1r2 = reflect(T1; dir="vertical")
         if T1 != T1r2
             reflection_equality = false
         end
@@ -257,13 +260,13 @@ end
             end
 
             d3 = copy(d2)
-            d3.nodes[1] = hor_reflection(d3.nodes[1])
+            d3.nodes[1] = reflect(d3.nodes[1]; dir="horizontal")
             if d1 != d3 && no_bubbles
                 reflection_equality = false
             end
 
             d3 = copy(d2)
-            d3.nodes[1] = ver_reflection(d3.nodes[1])
+            d3.nodes[1] = reflect(d3.nodes[1]; dir="vertical")
             if d1 != d3 && no_bubbles
                 reflection_equality = false
             end
@@ -375,10 +378,10 @@ end
         add_random_allowed_label_combinations!(T1; max_num_allowed_combinations=rand(3:10))
         add_random_forbidden_label_combinations!(T1; max_num_forbidden_combinations=rand(3:10))
 
-        if T1 != hor_reflection(hor_reflection(T1))
+        if T1 != reflect(reflect(T1; dir="horizontal"); dir="horizontal")
             involution_h = false
         end
-        if T1 != ver_reflection(ver_reflection(T1))
+        if T1 != reflect(reflect(T1; dir="vertical"); dir="vertical")
             involution_v = false
         end
 

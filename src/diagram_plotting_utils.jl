@@ -1,10 +1,17 @@
 #################################################
 # TOC
+# topic 0:          EXPORTS AND IMPORTS
 # topic 1:           PLOTTING LEG MARKERS ALONG SEGMENTS
 # topic 2:           PLOTTING TENSOR NODES
 # topic 3:           PLOTTING TENSOR DIAGRAMS
 # topic 4:           DISPLAY UTILITIES
 #################################################
+
+#################################################
+# topic 0: EXPORTS AND IMPORTS  
+#################################################
+
+export plot_tensor_node, plot_tensor_node_list, plot_tensor_diagram, display_scrollable_figures
 
 using CairoMakie
 using NetworkLayout

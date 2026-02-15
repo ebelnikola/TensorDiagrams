@@ -1,5 +1,6 @@
 ##################################################################
 # TOC
+# topic -2:          EXPORTS
 # topic -1:          COLOR PALETTE
 # topic 0:           CONFIG LOADER
 # topic 1:           BASICS
@@ -23,8 +24,15 @@
 # topic 6:           UTILS
 # topic 7:           RANDOM GENERATORS
 ##################################################################
-__precompile__(false) # TODO: This should disappear eventually when we 
-#                     #       wrap everything into a module. 
+
+module TensorDiagrams
+
+##################################################################
+# topic -2: EXPORTS 
+##################################################################
+
+export load_config
+export TensorNode, TensorDiagram
 
 ##################################################################
 # topic -1: COLOR PALETTE 
@@ -356,3 +364,5 @@ include("utils.jl")
 # topic 7: RANDOM GENERATORS
 #########################################################
 include("random_generators.jl")
+
+end # module TensorDiagrams

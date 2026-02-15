@@ -1,8 +1,14 @@
 #################################################
 # TOC
-# topic 1: SPACE ID DEFINITION AND UTILS
+# topic 0:         EXPORTS
+# topic 1:         SPACE ID DEFINITION AND UTILS
 #################################################
 
+##################################################
+# topic 0: EXPORTS
+##################################################
+
+export SpaceID, string_to_space_id, is_valid_space_id, get_space_id, @sid_str
 
 ##################################################
 # topic 1: SPACE ID DEFINITION AND UTILS
@@ -125,8 +131,4 @@ function get_space_id(diag; side="top")
 
     return SpaceID(legs_labels, legs_posidx, slots_number)
 end
-
-#################################################
-# topic 1: SPACE ID UTILS
-#################################################
 

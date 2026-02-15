@@ -1,15 +1,48 @@
 #################################################
 # TOC
+# topic -1:          EXPORTS 
+# topic 0:           UTILITY FUNCTIONS
 # topic 1:           NODE CONSISTENCY CHECKS
 # topic 2:           DIAGRAM CONSISTENCY CHECKS
 #################################################
 
 #################################################
-# TOC
-# topic 1:           NODE CONSISTENCY CHECKS
-# topic 2:           DIAGRAM CONSISTENCY CHECKS
+# topic -1: EXPORTS
 #################################################
 
+export check_node_consistency, check_diagram_consistency, print_failed_checks
+
+
+#################################################
+# topic 0: UTILITY FUNCTIONS
+#################################################
+
+
+"""
+    print_failed_checks(results::Dict{String,Bool})
+
+Prints the keys of the checks that failed (value is `false`).
+If all checks passed, prints "all checks are passed".
+
+# Arguments
+- `results`: A dictionary mapping check names to boolean results.
+"""
+function print_failed_checks(results::Dict{String,Bool})
+    failed_checks = [k for (k, v) in results if !v]
+    if isempty(failed_checks)
+        println("all checks are passed")
+    else
+        println("FAILED CHECKS:")
+        for check in sort(failed_checks)
+            println("- $check")
+        end
+    end
+end
+
+
+#################################################
+# topic 1: NODE CONSISTENCY CHECKS
+#################################################
 
 """
     check_node_consistency(node::TensorNode)
@@ -32,10 +65,6 @@ Performs a series of consistency checks on a `TensorNode` and returns a dictiona
 # Returns
 - A `Dict{String, Bool}` containing the result of each check.
 """
-#################################################
-# topic 1: NODE CONSISTENCY CHECKS
-#################################################
-
 function check_node_consistency(node::TensorNode)
     results = Dict{String,Bool}()
 
@@ -71,20 +100,10 @@ function check_node_consistency(node::TensorNode)
 end
 
 
-"""
-    is_dual(node::TensorNode, leg_idx::Int)
 
-Determines if a specific leg of a `TensorNode` is dual.
-Condition: (leg_idx > out_legs_num) XOR dual[leg_idx] XOR flipped[leg_idx]
-"""
-function is_dual(node::TensorNode, leg_idx::Int)
-    cond1 = leg_idx > node.out_legs_num
-    cond2 = node.dual[leg_idx]
-    cond3 = node.flipped[leg_idx]
-    # odd number of conditions true => dual
-    return (cond1 + cond2 + cond3) % 2 == 1
-end
-
+#################################################
+# topic 2: DIAGRAM CONSISTENCY CHECKS
+#################################################
 """
     check_diagram_consistency(diag::TensorDiagram)
 
@@ -120,10 +139,6 @@ Performs a series of consistency checks on a `TensorDiagram` and returns a dicti
 # Returns
 - A `Dict{String, Bool}` containing the result of each check.
 """
-#################################################
-# topic 2: DIAGRAM CONSISTENCY CHECKS
-#################################################
-
 function check_diagram_consistency(diag::TensorDiagram)
     results = Dict{String,Bool}()
 
@@ -240,6 +255,8 @@ function check_diagram_consistency(diag::TensorDiagram)
     return results
 end
 
+
+
 function _valid_label(str)
     components = split(str, "←")
     lbl = components[1]
@@ -256,22 +273,15 @@ function _valid_label(str)
 end
 
 """
-    print_failed_checks(results::Dict{String,Bool})
+    is_dual(node::TensorNode, leg_idx::Int)
 
-Prints the keys of the checks that failed (value is `false`).
-If all checks passed, prints "all checks are passed".
-
-# Arguments
-- `results`: A dictionary mapping check names to boolean results.
+Determines if a specific leg of a `TensorNode` is dual.
+Condition: (leg_idx > out_legs_num) XOR dual[leg_idx] XOR flipped[leg_idx]
 """
-function print_failed_checks(results::Dict{String,Bool})
-    failed_checks = [k for (k, v) in results if !v]
-    if isempty(failed_checks)
-        println("all checks are passed")
-    else
-        println("FAILED CHECKS:")
-        for check in sort(failed_checks)
-            println("- $check")
-        end
-    end
+function is_dual(node::TensorNode, leg_idx::Int)
+    cond1 = leg_idx > node.out_legs_num
+    cond2 = node.dual[leg_idx]
+    cond3 = node.flipped[leg_idx]
+    # odd number of conditions true => dual
+    return (cond1 + cond2 + cond3) % 2 == 1
 end

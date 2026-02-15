@@ -1,8 +1,15 @@
 #################################################
 # TOC
+# topic 0:           EXPORTS AND IMPORTS
 # topic 1:           NODE GENERATION
 # topic 2:           DIAGRAM GENERATION
 #################################################
+
+############################################
+# topic 0: EXPORTS AND IMPORTS
+############################################
+
+export generate_random_tensor_node, add_random_forbidden_label_combinations!, add_random_allowed_label_combinations!, generate_random_tensor_diagram, add_random_dangling_indices!
 
 using Random
 

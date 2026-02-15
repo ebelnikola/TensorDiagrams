@@ -1,8 +1,15 @@
 #################################################
 # TOC
+# topic 0:           EXPORTS
 # topic 1:           GENERAL UTILITIES
 # topic 2:           CODE PROCESSING UTILITIES
 #################################################
+
+#################################################
+# topic 0: EXPORTS
+#################################################
+
+export walk_through_dict_tree, generate_nfi!, extract_variables, remove_last_lines
 
 #################################################
 # topic 1: GENERAL UTILITIES

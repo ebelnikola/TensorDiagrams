@@ -1,9 +1,16 @@
 #################################################
 # TOC
+# topic 0:           EXPORTS
 # topic 1:           RELABELING
 # topic 2:           DANGLING INDICES
 # topic 3:           STANDARDIZATION
 #################################################
+
+#########################################################
+# topic 0: EXPORTS
+#########################################################
+
+export relabel!, relabel, drop_dangling_indices!, drop_dangling_indices, standardize_diagram
 
 
 #########################################################

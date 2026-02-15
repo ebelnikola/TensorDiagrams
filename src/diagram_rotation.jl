@@ -1,9 +1,16 @@
 #################################################
 # TOC
+# topic -1:          EXPORTS 
 # topic 0:           DICTIONARY ROTATING UTILITES
 # topic 1:           ROTATION (NODE)
 # topic 2:           ROTATION (DIAGRAM)
 #################################################
+
+#################################################
+# topic -1: EXPORTS
+#################################################
+
+export rotate, unrotate
 
 #################################################
 # topic 0: DICTIONARY ROTATING UTILITES
