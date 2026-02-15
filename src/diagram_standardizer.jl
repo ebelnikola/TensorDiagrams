@@ -1,3 +1,145 @@
+#################################################
+# TOC
+# topic 1:           RELABELING
+# topic 2:           DANGLING INDICES
+# topic 3:           STANDARDIZATION
+#################################################
+
+
+#########################################################
+# topic 1: RELABELING
+#########################################################
+"""
+    relabel!(diag::TensorDiagram, index_map::Dict{Int,Int})
+
+Relabels the indices of the diagram in place using the provided dictionary.
+Updates `contraction_pattern`, `boundary_legs`, and `labels`.
+Indices not present in `index_map` are left unchanged.
+
+# Arguments
+- `diag`: The diagram to relabel.
+- `index_map`: A dictionary mapping old indices to new indices.
+
+# Returns
+- `diag`: The modified diagram.
+"""
+function relabel!(diag::TensorDiagram, index_map::Dict{Int,Int})
+    if length(unique(values(index_map))) != length(keys(index_map))
+        throw(ArgumentError("The relabeling dictionary contains non-unique target indices."))
+    end
+    diag.contraction_pattern = [[get(index_map, idx, idx) for idx in pattern] for pattern in diag.contraction_pattern]
+    diag.boundary_legs = Dict(side => [get(index_map, idx, idx) for idx in legs] for (side, legs) in diag.boundary_legs)
+    diag.labels = Dict(get(index_map, idx, idx) => lbl for (idx, lbl) in diag.labels)
+    return diag
+end
+"""
+    relabel(diag::TensorDiagram, index_map::Dict{Int,Int})
+
+Creates a copy of the diagram with indices relabeled using the provided dictionary.
+
+# Arguments
+- `diag`: The diagram to relabel.
+- `index_map`: A dictionary mapping old indices to new indices.
+
+# Returns
+- A new `TensorDiagram` with relabeled indices.
+"""
+function relabel(diag::TensorDiagram, index_map::Dict{Int,Int})
+    return relabel!(copy(diag), index_map)
+end
+
+
+#########################################################
+# topic 2: DANGLING INDICES
+#########################################################
+
+
+"""
+    drop_dangling_indices!(diag::TensorDiagram, side::String)
+
+Removes boundary legs (indices) from a specific side of a diagram that are not involved in the contraction pattern.
+Modifies `diag` in place.
+
+# Arguments
+- `diag`: The diagram structure to modify.
+- `side`: The side to process (e.g., "left", "right", "top", "bottom").
+
+# Returns
+- `diag`: The modified diagram.
+"""
+function drop_dangling_indices!(diag, side)
+    all_indices_in_pattern = Set(vcat(diag.contraction_pattern...))
+    if haskey(diag.boundary_legs, side)
+        mask = [x ∈ all_indices_in_pattern for x in diag.boundary_legs[side]]
+        to_remove_from_labels = diag.boundary_legs[side][.!mask]
+        for key in to_remove_from_labels
+            delete!(diag.labels, key)
+        end
+        diag.boundary_legs[side] = diag.boundary_legs[side][mask]
+        diag.boundary_legs_posidx[side] = diag.boundary_legs_posidx[side][mask]
+    end
+
+    return diag
+end
+"""
+    drop_dangling_indices(diag_init, side::String)
+
+Removes boundary legs (indices) from a specific side of a diagram that are not involved in the contraction pattern. This function creates a copy of the input diagram and modifies the copy.
+
+
+# Arguments
+- `diag_init`: The initial diagram structure.
+
+# Returns
+- `diag`: A new diagram with dangling indices removed.
+"""
+function drop_dangling_indices(diag_init, side)
+    diag = copy(diag_init)
+    drop_dangling_indices!(diag, side)
+    return diag
+end
+"""
+    drop_dangling_indices!(diag::TensorDiagram)
+
+Removes boundary legs (indices) from all sides of the diagram that are not involved in the contraction pattern.
+Modifies `diag` in place.
+
+# Arguments
+- `diag`: The diagram structure to modify.
+
+# Returns
+- `diag`: The modified diagram.
+"""
+function drop_dangling_indices!(diag)
+    for side in keys(diag.boundary_legs)
+        drop_dangling_indices!(diag, side)
+    end
+
+    return diag
+end
+"""
+    drop_dangling_indices(diag_init)
+
+Removes boundary legs (indices) from a diagram that are not involved in the contraction pattern.
+This function creates a copy of the input diagram and modifies the copy.
+
+# Arguments
+- `diag_init`: The initial diagram structure.
+
+# Returns
+- `diag`: A new diagram with dangling indices removed.
+"""
+function drop_dangling_indices(diag_init)
+    diag = copy(diag_init)
+    drop_dangling_indices!(diag)
+    return diag
+end
+
+
+#########################################################
+# topic 3: STANDARDIZATION
+#########################################################
+
 """
     standardize_diagram(diagram::TensorDiagram)
 
@@ -143,3 +285,4 @@ function standardize_diagram(diagram::TensorDiagram)
 
     return standard_diag, success
 end
+

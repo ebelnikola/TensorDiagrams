@@ -3,6 +3,7 @@
 # topic 1:           PLOTTING LEG MARKERS ALONG SEGMENTS
 # topic 2:           PLOTTING TENSOR NODES
 # topic 3:           PLOTTING TENSOR DIAGRAMS
+# topic 4:           DISPLAY UTILITIES
 #################################################
 
 using CairoMakie
@@ -224,18 +225,28 @@ function draw_tensor_node!(ax, node::TensorNode, center_x=0.0, center_y=0.0, wid
     arrow_fontsize = name_fontsize * 0.618
     arrow_x = node_x_max
     arrow_y = node_y_max
-    # Determine which arrow(s) to display
-    if node.hor_ref && node.ver_ref
-        # Both reflections: show both arrows
-        text!(ax, arrow_x, arrow_y, text="↔↕",
-            align=(:right, :top), fontsize=arrow_fontsize, color=:black)
-    elseif node.hor_ref
-        # Only horizontal reflection
-        text!(ax, arrow_x, arrow_y, text="↔",
-            align=(:right, :top), fontsize=arrow_fontsize, color=:black)
-    elseif node.ver_ref
-        # Only vertical reflection
-        text!(ax, arrow_x, arrow_y, text="↕",
+
+    # Construct the label string
+    label_text = ""
+    if node.hor_ref
+        label_text *= "↔"
+    end
+    if node.ver_ref
+        label_text *= "↕"
+    end
+
+    # Add rotation symbol
+    rot_k = mod(node.rotation, 4)
+    if rot_k == 1
+        label_text *= "↺"
+    elseif rot_k == 2
+        label_text *= "↺²"
+    elseif rot_k == 3
+        label_text *= "↺³"
+    end
+
+    if !isempty(label_text)
+        text!(ax, arrow_x, arrow_y, text=label_text,
             align=(:right, :top), fontsize=arrow_fontsize, color=:black)
     end
 
@@ -374,8 +385,10 @@ function calculate_node_coordinates(diagram::TensorDiagram; node_repulsion_stren
     boundary_legs = Int[]
     boundary_legs_coordinates = Tuple{Float64,Float64}[]
 
-    n_left = n_right = diagram.boundary_slots_num["horizontal"]
-    n_top = n_bottom = diagram.boundary_slots_num["vertical"]
+    n_left = get(diagram.boundary_slots_num, "left", 0)
+    n_right = get(diagram.boundary_slots_num, "right", 0)
+    n_top = get(diagram.boundary_slots_num, "top", 0)
+    n_bottom = get(diagram.boundary_slots_num, "bottom", 0)
     # Configuration for all boundaries: (side_name, n_total, box_dimension, fixed_coord, vary_axis, vary_min)
     boundary_configs = [
         ("left", n_left, box_height, x_min, "y", y_min),
@@ -542,9 +555,6 @@ function plot_tensor_diagram(diagram::TensorDiagram;
     y_min = -box_height / 2
     y_max = box_height / 2
 
-    n_left = n_right = get(diagram.boundary_slots_num, "horizontal", 0)
-    n_top = n_bottom = get(diagram.boundary_slots_num, "vertical", 0)
-
     # ===== 2. COMPUTE NODE POSITIONS =====
     node_coordinates = calculate_node_coordinates(diagram; node_repulsion_strength=node_repulsion_strength)
 
@@ -583,7 +593,7 @@ function plot_tensor_diagram(diagram::TensorDiagram;
     for (side, fixed_coord, vary_min, vary_range, vary_axis) in boundary_configs
         legs = get(diagram.boundary_legs, side, Int[])
         position_indices = get(diagram.boundary_legs_posidx, side, Int[])
-        n_total = side in ["left", "right"] ? n_left : n_top
+        n_total = get(diagram.boundary_slots_num, side, 0)
 
         for (leg_idx, posidx) in enumerate(position_indices)
             varying_coord = vary_min + (posidx / (n_total + 1)) * vary_range
@@ -712,6 +722,12 @@ function plot_tensor_diagram(diagram::TensorDiagram;
             leg_fontsize=node_leg_fontsize, name_fontsize=node_name_fontsize, strokewidth=strokewidth)
     end
 
+
+    n_left = get(diagram.boundary_slots_num, "left", 0)
+    n_right = get(diagram.boundary_slots_num, "right", 0)
+    n_top = get(diagram.boundary_slots_num, "top", 0)
+    n_bottom = get(diagram.boundary_slots_num, "bottom", 0)
+
     # Draw boundary legs (top layer)
     boundary_draw_configs = [
         ("left", (x_min, y_min), (x_min, y_max), n_left),
@@ -735,4 +751,69 @@ end
 function Base.show(io::IO, m::Union{MIME"image/png",MIME"image/svg+xml"}, node::TensorDiagram)
     fig = plot_tensor_diagram(node)
     show(io, m, fig)
+end
+
+#################################################
+# topic 4: DISPLAY UTILITIES
+#################################################
+
+"""
+    display_scrollable_figures(figure_lists...; max_height="500px")
+
+Display lists of figures side-by-side in a single scrollable container using a grid layout.
+This is useful for comparing sequences of diagrams or plots in Jupyter notebooks.
+
+# Arguments
+- `figure_lists...`: Variable number of lists (Vectors) containing figures to be displayed. All lists must have the same length. 
+- `max_height`: String specifying the maximum height of the scrollable area (default: "500px").
+
+# Details
+- All input lists must be of equal length. If you have unequal lists, pad the shorter ones with `missing`.
+- The display uses an HTML grid with `overflow: auto`.
+- Items that are `AbstractString` are wrapped in `<pre>` tags.
+- Other items are displayed using `show(io, MIME"image/svg+xml"(), item)`.
+- `missing` items result in an empty cell.
+
+# Example
+```julia
+list1 = [plot1, plot2]
+list2 = [plot3, plot4]
+display_scrollable_figures(list1, list2; max_height="600px")
+```
+"""
+function display_scrollable_figures(figure_lists...; max_height="500px")
+    if !all(l -> length(l) == length(figure_lists[1]), figure_lists)
+        error("All figure lists must have the same length. Note that you can pad shorter lists with `missing` values.")
+    end
+
+    io = IOBuffer()
+
+    # Grid-based layout for consistent column widths and common scrolling
+    n_cols = length(figure_lists)
+    # Using max-content ensures columns are wide enough for the content (preventing horizontal chop).
+    # The container has overflow: auto, so it will scroll if total width exceeds viewport.
+    grid_style = "display: grid; grid-template-columns: repeat($(n_cols), max-content); gap: 20px; max-height: $(max_height); overflow: auto; padding: 10px;"
+
+    print(io, """<div style="$(grid_style)">""")
+
+    n_items = isempty(figure_lists) ? 0 : length(figure_lists[1])
+
+    for i in 1:n_items
+        for list in figure_lists
+            item = list[i]
+            # Cell style: border-bottom provides the row separator feel
+            print(io, """<div style="padding: 10px; border-bottom: 1px solid #ccc;">""")
+            if !ismissing(item)
+                if item isa AbstractString
+                    print(io, "<pre>", item, "</pre>")
+                else
+                    show(io, MIME"image/svg+xml"(), item)
+                end
+            end
+            print(io, "</div>")
+        end
+    end
+    print(io, "</div>")
+
+    display(MIME("text/html"), String(take!(io)))
 end

@@ -1,3 +1,22 @@
+#################################################
+# TOC
+# topic 1:           GLUING
+#################################################
+
+function _opposed_side(side::String)
+    if side == "left"
+        return "right"
+    elseif side == "right"
+        return "left"
+    elseif side == "top"
+        return "bottom"
+    elseif side == "bottom"
+        return "top"
+    else
+        throw(ArgumentError("Invalid side: $side. Supported sides are 'left', 'right', 'top', 'bottom'."))
+    end
+end
+
 """
     glue_diagrams(d1::TensorDiagram, d2::TensorDiagram, sides::Vector{String})
 
@@ -13,11 +32,15 @@ Glue two `TensorDiagram`s along the specified sides.
 # Returns
 - `TensorDiagram`: The resulting glued diagram.
 """
-function glue_diagrams(d1::TensorDiagram, d2::TensorDiagram, sides::Vector{String})
+function glue_diagrams(d1::TensorDiagram, d2::TensorDiagram, sides::Vector{String}; reflect_second=false)
 
     # 0. Making copies so that we can mutate diagrams in place
     d1 = copy(d1)
     d2 = copy(d2)
+
+    if reflect_second
+        d2 = reflect(d2; dir=sides[2] in ["left", "right"] ? "vertical" : "horizontal")
+    end
 
     # 1. Geometry and compatibility:
     #    diagrams orientation, 
@@ -27,34 +50,18 @@ function glue_diagrams(d1::TensorDiagram, d2::TensorDiagram, sides::Vector{Strin
 
     # 1.1 Orientation
 
+    sides_order = ["left", "top", "right", "bottom"]
+    orientation_1 = findfirst(==(sides[1]), sides_order)
+    orientation_2 = findfirst(==(sides[2]), sides_order)
+
+    if mod(orientation_1 - orientation_2, 4) != 2
+        d2 = rotate(d2, 2 + (orientation_2 - orientation_1))
+        sides[2] = _opposed_side(sides[1])
+    end
+
     ishorizontal_1 = sides[1] in ["left", "right"]
-    ishorizontal_2 = sides[2] in ["left", "right"]
-
-    if !(ishorizontal_1 == ishorizontal_2)
-        # TODO: To glue horizontal and vertical sides we need to code up 
-        #       rotations for nodes and for diagrams. This will, probably,
-        #       require adding rotation flag for nodes in addition to reflection flags.
-        #       As we don't need this now, I leave it for future work. 
-        throw(ArgumentError("Current implementation only supports gluing along same orientation sides (horizontal with horizontal or vertical with vertical)."))
-    end
-
-    if sides[1] == sides[2]
-        # same sides glued, need to reflect d2
-        d2 = reflect(d2; dir=ishorizontal_2 ? "horizontal" : "vertical")
-        sides[2] = ishorizontal_2 ? (sides[2] == "left" ? "right" : "left") : (sides[2] == "top" ? "bottom" : "top")
-    end
 
     # 1.2 Spaces compatibility check
-    # 1.2.1 Checking that boundaries have the same number of slots so that space IDs mean the same thing
-
-    nodes_num_1 = ishorizontal_1 ? d1.boundary_slots_num["horizontal"] : d1.boundary_slots_num["vertical"]
-    nodes_num_2 = ishorizontal_2 ? d2.boundary_slots_num["horizontal"] : d2.boundary_slots_num["vertical"]
-
-    if nodes_num_1 != nodes_num_2
-        throw(ArgumentError("Cannot glue $(sides[1]) and $(sides[2]) sides of diagrams: number of legs do not match (d1 has $nodes_num_1 legs, d2 has $nodes_num_2 legs)."))
-    end
-
-    # 1.2.2 Comparing space IDs
 
     space_id_1 = get_space_id(d1; side=sides[1])
     space_id_2 = get_space_id(d2; side=sides[2])
@@ -176,48 +183,102 @@ function glue_diagrams(d1::TensorDiagram, d2::TensorDiagram, sides::Vector{Strin
 
     # 3.2.2 constructing new boundary dicts
 
-    new_num_of_hor_bound_slots = ishorizontal_1 ? d1.boundary_slots_num["horizontal"] : d1.boundary_slots_num["horizontal"] + d2.boundary_slots_num["horizontal"]
-    new_num_of_ver_bound_slots = ishorizontal_1 ? d1.boundary_slots_num["vertical"] + d2.boundary_slots_num["vertical"] : d1.boundary_slots_num["vertical"]
-    new_boundary_slots_num = Dict("horizontal" => new_num_of_hor_bound_slots, "vertical" => new_num_of_ver_bound_slots)
 
-    new_boundary_legs = Dict{String,Vector{Int}}()
-    new_boundary_legs_posidx = Dict{String,Vector{Int}}()
 
     d1_pos = sides[2] # At this stage sides are necessarily different 
-    d2_pos = sides[1] # we took care of this above by reflection. 
+    d2_pos = sides[1] # we took care of this above by rotations 
     #                   Now, imagine sides = left, right, which means that 
     #                   we glue left boundary of d1 with right boundary of d2
     #                   So, d1_pos will be in the right part of the diagram (sides[2]), 
     #                   and d2_pos will be in the left part of the diagram (sides[1]) 
 
-    # Now, if we do horizontal gluing (□□) we should shift the posidx on 
-    # top and bottom sides for the diagram that will be on the right side 
-    hor_shift_d1 = ishorizontal_1 ? (d1_pos == "left" ? 0 : d2.boundary_slots_num["vertical"]) : 0
-    hor_shift_d2 = ishorizontal_1 ? (d2_pos == "left" ? 0 : d1.boundary_slots_num["vertical"]) : 0
 
-    # same for vertical gluing □
-    #                          □
-    isvertical = !ishorizontal_1
-    ver_shift_d1 = isvertical ? (d1_pos == "bottom" ? 0 : d2.boundary_slots_num["horizontal"]) : 0
-    ver_shift_d2 = isvertical ? (d2_pos == "bottom" ? 0 : d1.boundary_slots_num["horizontal"]) : 0
+    if ishorizontal_1
+        # Horizontal gluing: d1 and d2 are side-by-side
+        # New "vertical" slots (top/bottom) are sum of previous
+        new_slots_top = get(d1.boundary_slots_num, "top", 0) + get(d2.boundary_slots_num, "top", 0)
+        new_slots_bottom = get(d1.boundary_slots_num, "bottom", 0) + get(d2.boundary_slots_num, "bottom", 0)
 
-    # having shifts arranged we can populate new boundary legs dicts
+        # New "horizontal" slots (left/right) come from the outer boundaries
+
+        is_d1_left = (d1_pos == "left")
+        # If d1 is on the left, new left is d1's left boundary, new right is d2's right boundary
+
+        new_slots_left = is_d1_left ? get(d1.boundary_slots_num, "left", 0) : get(d2.boundary_slots_num, "left", 0)
+        new_slots_right = is_d1_left ? get(d2.boundary_slots_num, "right", 0) : get(d1.boundary_slots_num, "right", 0)
+
+    else
+        # Vertical gluing: d1 and d2 are stacked
+        # New "horizontal" slots (left/right) are sum of previous
+        new_slots_left = get(d1.boundary_slots_num, "left", 0) + get(d2.boundary_slots_num, "left", 0)
+        new_slots_right = get(d1.boundary_slots_num, "right", 0) + get(d2.boundary_slots_num, "right", 0)
+
+        # New "vertical" slots (top/bottom) come from outer boundaries
+        is_d1_bottom = (d1_pos == "bottom")
+        # If d1 is on the bottom, new bottom is d1's bottom boundary, new top is d2's top boundary
+
+        new_slots_bottom = is_d1_bottom ? get(d1.boundary_slots_num, "bottom", 0) : get(d2.boundary_slots_num, "bottom", 0)
+        new_slots_top = is_d1_bottom ? get(d2.boundary_slots_num, "top", 0) : get(d1.boundary_slots_num, "top", 0)
+    end
+
+    new_boundary_slots_num = Dict(
+        "top" => new_slots_top,
+        "bottom" => new_slots_bottom,
+        "left" => new_slots_left,
+        "right" => new_slots_right
+    )
+
+    new_boundary_legs = Dict{String,Vector{Int}}()
+    new_boundary_legs_posidx = Dict{String,Vector{Int}}()
+
+
+    # Now, if we do horizontal gluing (dL dR) we should shift the posidx on 
+    # top and bottom sides for the diagram that will be on the right side.
+    # The shift amount is the number of top/bottom slots of the left diagram.
+
     for side in ["top", "bottom", "left", "right"]
         legs_1 = get(d1.boundary_legs, side, Int[])
         legs_2 = get(d2.boundary_legs, side, Int[])
         posidx_1 = get(d1.boundary_legs_posidx, side, Int[])
         posidx_2 = get(d2.boundary_legs_posidx, side, Int[])
 
-        if side == "top" || side == "bottom"
-            posidx_1 = [pos + hor_shift_d1 for pos in posidx_1]
-            posidx_2 = [pos + hor_shift_d2 for pos in posidx_2]
-        else
-            posidx_1 = [pos + ver_shift_d1 for pos in posidx_1]
-            posidx_2 = [pos + ver_shift_d2 for pos in posidx_2]
+        current_shift_1 = 0
+        current_shift_2 = 0
+
+        if ishorizontal_1 && (side == "top" || side == "bottom")
+            # Horizontal Gluing. 
+            # If d1 is on the LEFT (d1_pos == "left"), d2 is on the RIGHT. 
+            # d2 needs to be shifted by d1's width (slots)
+            if d1_pos == "left"
+                current_shift_2 = get(d1.boundary_slots_num, side, 0)
+            end
+
+            # If d2 is on the LEFT (d2_pos == "left"), d1 is on the RIGHT.
+            # d1 needs to be shifted by d2's width (slots)
+            if d2_pos == "left"
+                current_shift_1 = get(d2.boundary_slots_num, side, 0)
+            end
+        elseif !ishorizontal_1 && (side == "left" || side == "right")
+            # Vertical Gluing.
+            # If d1 is on the BOTTOM (d1_pos == "bottom"), d2 is on the TOP.
+            # d2 needs to be shifted by d1's height (slots)
+            if d1_pos == "bottom"
+                current_shift_2 = get(d1.boundary_slots_num, side, 0)
+            end
+            # If d2 is on the BOTTOM (d2_pos == "bottom"), d1 is on the TOP.
+            # d1 needs to be shifted by d2's height (slots)
+            if d2_pos == "bottom"
+                current_shift_1 = get(d2.boundary_slots_num, side, 0)
+            end
         end
 
+        # Apply shifts
+        # Note: If side is not one of the shifted ones, shift is 0.
+        posidx_1_shifted = [pos + current_shift_1 for pos in posidx_1]
+        posidx_2_shifted = [pos + current_shift_2 for pos in posidx_2]
+
         new_boundary_legs[side] = vcat(legs_1, legs_2)
-        new_boundary_legs_posidx[side] = vcat(posidx_1, posidx_2)
+        new_boundary_legs_posidx[side] = vcat(posidx_1_shifted, posidx_2_shifted)
     end
 
     # 3.3 New labels dict
@@ -225,7 +286,7 @@ function glue_diagrams(d1::TensorDiagram, d2::TensorDiagram, sides::Vector{Strin
 
     # 3.4 New factor
 
-    new_factor = "(" * d1.factor * "*" * d2.factor * ")"
+    new_factor = d1.factor == "1.0" ? d2.factor : (d2.factor == "1.0" ? d1.factor : "(" * d1.factor * "*" * d2.factor * ")")
 
     # 3.5 New node coordinates 
 

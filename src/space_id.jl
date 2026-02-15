@@ -1,3 +1,12 @@
+#################################################
+# TOC
+# topic 1: SPACE ID DEFINITION AND UTILS
+#################################################
+
+
+##################################################
+# topic 1: SPACE ID DEFINITION AND UTILS
+##################################################
 
 struct SpaceID
     labels::Vector{String}
@@ -112,8 +121,12 @@ function get_space_id(diag; side="top")
     legs_labels = legs_labels[perm]
     legs_posidx = legs_posidx[perm]
 
-    slots_key = (side == "left" || side == "right") ? "horizontal" : "vertical"
-    slots_number = diag.boundary_slots_num[slots_key]
+    slots_number = diag.boundary_slots_num[side]
 
     return SpaceID(legs_labels, legs_posidx, slots_number)
 end
+
+#################################################
+# topic 1: SPACE ID UTILS
+#################################################
+

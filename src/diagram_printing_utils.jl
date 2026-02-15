@@ -1,3 +1,8 @@
+#################################################
+# TOC
+# topic 1:           PRINTING UTILS
+#################################################
+
 """
     pretty_format(diag::TensorDiagram; pad_to::Int=0)
 
@@ -30,11 +35,15 @@ function pretty_format(diag::TensorDiagram; pad_to::Int=0)
     _print_aligned_columns(io, [node_names, pattern_strs])
 
     # 2. Boundary Legs Num
-    h_num = get(diag.boundary_slots_num, "horizontal", 0)
-    v_num = get(diag.boundary_slots_num, "vertical", 0)
-    println(io, "  Hor. boundary legs num: ", h_num)
-    println(io, "  Ver. boundary legs num: ", v_num)
-    println(io, "")
+    l_num = string(get(diag.boundary_slots_num, "left", 0))
+    t_num = string(get(diag.boundary_slots_num, "top", 0))
+    r_num = string(get(diag.boundary_slots_num, "right", 0))
+    b_num = string(get(diag.boundary_slots_num, "bottom", 0))
+
+    println(io, "  Boundary slots num:")
+    header_row = ["left", "top", "right", "bottom"]
+    value_row = [l_num, t_num, r_num, b_num]
+    _print_aligned_columns(io, [header_row, value_row])
 
     # 3. Boundary Structure (Table only)
     println(io, "  Boundary Structure:")

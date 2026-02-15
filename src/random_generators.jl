@@ -1,3 +1,9 @@
+#################################################
+# TOC
+# topic 1:           NODE GENERATION
+# topic 2:           DIAGRAM GENERATION
+#################################################
+
 using Random
 
 ############################################
@@ -37,6 +43,15 @@ function generate_random_tensor_node(num_legs::Int, name::String; min_num_allowe
     end
     legs = Dict(side => shuffle(legs[side]) for side in keys(legs))
 
+    if max_num_of_allowed_rnd_labels == 0 && isnothing(necessary_labels)
+        return TensorNode(
+            name=name,
+            color=rand(PALETTE),
+            legs=legs,
+        )
+    end
+
+
     # 2. Determine allowed labels for each leg
     all_labels = collect(INFINITE_LABELS ∪ FINITE_LABELS)
 
@@ -45,6 +60,7 @@ function generate_random_tensor_node(num_legs::Int, name::String; min_num_allowe
     if !isnothing(necessary_labels)
         unique!.(append!.(allowed_labels, [necessary_labels]))
     end
+
 
     return TensorNode(
         name=name,
@@ -104,19 +120,20 @@ end
 
 
 """
-    generate_random_tensor_diagram(boundary_slots_num::Int; max_nodes_num::Int=5, max_leg_num::Int=5)
+    generate_random_tensor_diagram(boundary_legs_num::Int; max_nodes_num::Int=5, max_leg_num::Int=5, max_free_slots_num_per_side::Int=2)
 
 Generates a random TensorDiagram with a specified total number of boundary legs.
 Follows a specific construction strategy to ensure connectivity and valid boundary placement.
 
 # Arguments
-- `boundary_slots_num::Int`: Total number of negative indices (boundary legs) to place.
-- `max_nodes_num::Int`: Maximum number of nodes to generate (randomly picks 1 to max).
-- `max_leg_num::Int`: Maximum number of legs per node.
+- `boundary_legs_num::Int`: Total number of negative indices (boundary legs) to place.
+- `max_nodes_num::Int`: Maximum number of nodes to generate (randomly picks 1 to max). Default is 5.
+- `max_leg_num::Int`: Maximum number of legs per node. Default is 5.
+- `max_free_slots_num_per_side::Int`: Maximum number of free slots to leave unconnected per boundary side. Default is 2.
 
 # Construction Strategy
 1. Determine `nodes_num` randomly from 1 to `max_nodes_num`.
-2. Generate node leg counts such that total legs > `boundary_slots_num` and (total - boundary) is even.
+2. Generate node leg counts such that total legs > `boundary_legs_num` and (total - boundary) is even.
 3. Distribute negative indices (-1, -2, ...) into the node leg slots, preferring nodes with multiple available slots to encourage connectivity.
 4. Connect remaining slots with unique internal indices (positive integers), minimizing self-loops by preferring to connect different nodes.
 5. Create `TensorNode` objects for each node:
@@ -128,14 +145,14 @@ Follows a specific construction strategy to ensure connectivity and valid bounda
 # Returns
 - A `TensorDiagram` object.
 """
-function generate_random_tensor_diagram(boundary_slots_num::Int; max_nodes_num::Int=5, max_leg_num::Int=5)
+function generate_random_tensor_diagram(boundary_legs_num::Int; max_nodes_num::Int=5, max_leg_num::Int=5, max_free_slots_num_per_side::Int=2)
 
     # 1. Pick number of nodes
     # Ensure it is theoretically possible to satisfy constraints:
-    # We need total_slots >= boundary_slots_num.
-    min_nodes_required = max(ceil(Int, boundary_slots_num / max_leg_num), 1)
+    # We need total_slots >= boundary_legs_num.
+    min_nodes_required = max(ceil(Int, boundary_legs_num / max_leg_num), 1)
     if min_nodes_required > max_nodes_num
-        error("Impossible constraints: max_nodes_num ($max_nodes_num) * max_leg_num ($max_leg_num) < boundary_slots_num ($boundary_slots_num)")
+        error("Impossible constraints: max_nodes_num ($max_nodes_num) * max_leg_num ($max_leg_num) < boundary_legs_num ($boundary_legs_num)")
     end
 
     nodes_num = rand(min_nodes_required:max_nodes_num)
@@ -147,7 +164,7 @@ function generate_random_tensor_diagram(boundary_slots_num::Int; max_nodes_num::
 
     node_leg_counts = [rand(1:max_leg_num) for _ in 1:nodes_num]
     total_slots = sum(node_leg_counts)
-    if (total_slots - boundary_slots_num) % 2 != 0
+    if (total_slots - boundary_legs_num) % 2 != 0
         candidates = findall(x -> x < max_leg_num, node_leg_counts)
 
         if isempty(candidates)
@@ -170,7 +187,7 @@ function generate_random_tensor_diagram(boundary_slots_num::Int; max_nodes_num::
 
 
     # Increment leg counts if we don't have enough slots
-    while sum(node_leg_counts) < boundary_slots_num
+    while sum(node_leg_counts) < boundary_legs_num
         # Find nodes that can accept more legs
         candidates = findall(x -> x < max_leg_num, node_leg_counts)
         # Increment pair of legs
@@ -204,10 +221,10 @@ function generate_random_tensor_diagram(boundary_slots_num::Int; max_nodes_num::
     end
     shuffle!(available_slots)
 
-    # 3. Distribute numbers -1, -2, ... -boundary_slots_num
+    # 3. Distribute numbers -1, -2, ... -boundary_legs_num
     # We assign them randomly, preferring slots from nodes that have at least one other slot available to allow for internal connections later.
     assigned_boundary_indices = Int[]
-    for i in 1:boundary_slots_num
+    for i in 1:boundary_legs_num
         # Prefer slots from nodes that have at least one other slot available (to allow for internal connection later)
         candidate_idx = findfirst(slot -> count(s -> s[1] == slot[1], available_slots) > 1, available_slots)
 
@@ -246,6 +263,7 @@ function generate_random_tensor_diagram(boundary_slots_num::Int; max_nodes_num::
 
     # 5. Generate Random Nodes
     nodes = TensorNode[]
+    processed_indices = Set{Int}()
     for i in 1:nodes_num
         # Create node with correct number of legs
         nl = node_leg_counts[i]
@@ -253,7 +271,21 @@ function generate_random_tensor_diagram(boundary_slots_num::Int; max_nodes_num::
         # Pick the first finite label as the consistent one (e.g. "z")
         consistent_lbl = first(sort(collect(FINITE_LABELS))) # deterministic choice
 
-        node = generate_random_tensor_node(nl, "n$(i)"; necessary_labels=[consistent_lbl])
+        if rand() > 0.9
+            node = generate_random_tensor_node(nl, "n$(i)"; max_num_of_allowed_rnd_labels=0)
+        else
+            node = generate_random_tensor_node(nl, "n$(i)"; necessary_labels=[consistent_lbl])
+        end
+
+
+        for (leg_idx, global_idx) in enumerate(contraction_pattern[i])
+            if global_idx > 0 # internal leg
+                if !(global_idx in processed_indices)
+                    node.dual[leg_idx] = true
+                    push!(processed_indices, global_idx)
+                end
+            end
+        end
 
         push!(nodes, node)
     end
@@ -274,16 +306,22 @@ function generate_random_tensor_diagram(boundary_slots_num::Int; max_nodes_num::
 
     # Finalize structure
     boundary_slots_num_dict = Dict{String,Int}()
-    boundary_slots_num_dict["horizontal"] = max(length(boundary_legs["left"]), length(boundary_legs["right"]))
-    boundary_slots_num_dict["vertical"] = max(length(boundary_legs["top"]), length(boundary_legs["bottom"]))
+    for side in sides
+        boundary_slots_num_dict[side] = (get(boundary_legs, side, Int[]) |> length) + rand(0:max_free_slots_num_per_side)
+    end
+
+    # boundary_legs = boundary_legs |> Dict{String,Vector{Int}} what the hell was this line? 
+    boundary_legs_posidx = Dict{String,Vector{Int}}()
 
     for side in sides
         n_legs = length(boundary_legs[side])
-        n_pos = side in ["left", "right"] ? boundary_slots_num_dict["horizontal"] : boundary_slots_num_dict["vertical"]
+        n_pos = boundary_slots_num_dict[side]
         boundary_legs_posidx[side] = shuffle(collect(1:n_pos))[1:n_legs]
     end
 
     labels = Dict{Int,String}()
+
+
 
     return TensorDiagram(
         nodes=nodes,
@@ -296,6 +334,24 @@ function generate_random_tensor_diagram(boundary_slots_num::Int; max_nodes_num::
 end;
 
 
+"""
+    add_random_dangling_indices!(diag::TensorDiagram; max_num_dangling::Int=3)
+
+Adds random dangling (unconnected) boundary indices to a diagram in place.
+Dangling indices are boundary legs that are not connected to any tensor node.
+
+# Arguments
+- `diag::TensorDiagram`: The diagram to modify in place.
+- `max_num_dangling::Int`: Maximum number of dangling indices to add. Default is 3.
+
+# Details
+- Only adds indices to free slots (boundary positions not already occupied).
+- Generates new negative indices that don't conflict with existing ones.
+- Randomly distributes the new indices across available free slots on all sides.
+
+# Returns
+- `true` if at least one dangling index was added, `false` if no free slots were available or `max_num_dangling < 1`.
+"""
 function add_random_dangling_indices!(diag::TensorDiagram; max_num_dangling::Int=3)
 
     boundary_legs = vcat(values(diag.boundary_legs)...)
@@ -303,21 +359,25 @@ function add_random_dangling_indices!(diag::TensorDiagram; max_num_dangling::Int
     nni() = generate_nfi!(new_neg_index_cnt; dir="negative")
 
 
-    free_slots_num = diag.boundary_slots_num["horizontal"] * 2 + diag.boundary_slots_num["vertical"] * 2 - length(boundary_legs)
+    free_slots_total = 0
+    for side in ["left", "right", "top", "bottom"]
+        slots = get(diag.boundary_slots_num, side, 0)
+        occupied = length(get(diag.boundary_legs, side, Int[]))
+        free_slots_total += (slots - occupied)
+    end
 
-    if free_slots_num < 1
+    if free_slots_total < 1 || max_num_dangling < 1
         return false
     end
 
-    dangling_num = rand(1:min(max_num_dangling, free_slots_num))
-
-
+    dangling_num = rand(1:min(max_num_dangling, free_slots_total))
 
     free_slots = Tuple{String,Int}[]
-    for (side, positions) in diag.boundary_legs_posidx
-        leg_num_on_side = side in ["left", "right"] ? diag.boundary_slots_num["horizontal"] : diag.boundary_slots_num["vertical"]
+    for side in keys(diag.boundary_legs)
+        positions = diag.boundary_legs_posidx[side]
+        total_slots = diag.boundary_slots_num[side]
 
-        free_slots_on_side = setdiff(1:leg_num_on_side, positions)
+        free_slots_on_side = setdiff(1:total_slots, positions)
 
         append!(free_slots, [(side, slot) for slot in free_slots_on_side])
     end

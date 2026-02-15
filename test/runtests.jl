@@ -1,9 +1,10 @@
 using Test
 using Aqua
-
 include("../src/TensorDiagrams.jl")
-load_config((@__DIR__) * "/tests_config.yml")
 
+#Aqua.test_stale_deps(TensorDiagrams)
+
+load_config((@__DIR__) * "/tests_config.yml")
 
 ###################################################################
 # topic 1: LOADER AND RANDOM GENERATORS
@@ -12,14 +13,14 @@ load_config((@__DIR__) * "/tests_config.yml")
 @testset "YAML LOADER                     " begin
     # Tests the configuration loader to ensure  sets of labels
     # (finite vs infinite) are correctly parsed from the YAML file.
-    @test INFINITE_LABELS == Set(["x", "u", "d", "r"])
-    @test FINITE_LABELS == Set(["z", "q", "g", "z'", "t", "w", "c"])
+    @test INFINITE_LABELS == Set(["x1", "x2", "x3", "x4"])
+    @test FINITE_LABELS == Set(["z1", "z2", "z3"])
 end
 
 @testset "GENERATION OF RANDOM NODES      " begin
     # Checks basic consistency of generated node.
     node_consistency = true
-    # Checks if requested necessary_labels are indeed present in allowed_labels.
+    # Checks if requested necessary_labels are present in allowed_labels.
     necessary_labels_added = true
     # Checks consistency after adding forbidden combinations (should still be consistent if allowed ones are empty).
     node_consistency_after_adding_forbidden = true
@@ -75,6 +76,7 @@ end
     @test node_inconsistency_after_adding_both
 end
 
+
 @testset "GENERATION OF RANDOM DIAGRAMS   " begin
     # Checks that generated diagrams pass all consistency checks.
     diagram_consistency = true
@@ -126,6 +128,10 @@ end
     copy_equality = true
     # Tests that metadata (like 'width') is ignored in equality checks.
     metadata_ignorance = true
+    # Tests that reflecting a node does not break equality.
+    reflection_equality = true
+    # Tests that rotating a node does not break equality.
+    rotation_equality = true
 
 
     N = 1000
@@ -156,12 +162,28 @@ end
         if T1 != T1p
             metadata_ignorance = false
         end
+
+        T1r = hor_reflection(T1)
+
+        if T1 != T1r
+            reflection_equality = false
+        end
+        T1r2 = ver_reflection(T1)
+        if T1 != T1r2
+            reflection_equality = false
+        end
+        T1rot = rotate(T1)
+        if T1 != T1rot
+            rotation_equality = false
+        end
     end
 
     @test equality_reflexivity
     @test equality_inequality
     @test copy_equality
     @test metadata_ignorance
+    @test reflection_equality
+    @test rotation_equality
 end
 
 
@@ -172,33 +194,38 @@ end
     copy_equality = true
     # Tests that setting a label to "?" (unknown/default) does not break equality.
     unknown_label_equality = true
-    # Tests that modifying the structure (reflecting a node) breaks equality.
-    structure_inequality = true
+    # Tests that reflecting a node does not break equality.
+    reflection_equality = true
+    # Tests that rotating a node does not break equality.
+    rotation_equality = true
     # Test that setting a specific label (different from "?") breaks equality.
     label_inequality = true
     # Test that relabeling indices of the pattern preserves equality.
     relabeling_equality = true
     # Test that permuting nodes preserves equality.
     permutation_equality = true
-
+    # Test that permuting the storage order of boundary legs and their position indices preserves equality.
+    boundary_legs_permutation_equality = true
     # Test that adding dangling indices breaks equality.
-    dangling_indices_break_equality = true
+    dangling_indices_break_equality = false
 
 
     bubble_counter = 0
     N = 1000
     for _ = 1:N
-        boundary_slots_num = rand(0:20)
+        boundary_legs_num = rand(0:20)
         max_nodes_num = rand(1:10)
         max_leg_num = rand(1:8)
 
-        min_nodes_required = max(ceil(Int, boundary_slots_num / max_leg_num), 1)
+        min_nodes_required = max(ceil(Int, boundary_legs_num / max_leg_num), 1)
         expect_error = min_nodes_required > max_nodes_num
         if expect_error
             continue
         end
 
-        d1 = generate_random_tensor_diagram(boundary_slots_num; max_nodes_num=max_nodes_num, max_leg_num=max_leg_num)
+        d1 = generate_random_tensor_diagram(boundary_legs_num; max_nodes_num=max_nodes_num, max_leg_num=max_leg_num)
+        add_random_dangling_indices!(d1; max_num_dangling=rand(0:4))
+
         _, no_bubbles = standardize_diagram(d1)
 
         diagram_is_empty = length(d1.nodes) == 0
@@ -231,8 +258,20 @@ end
 
             d3 = copy(d2)
             d3.nodes[1] = hor_reflection(d3.nodes[1])
-            if d1 == d3 && no_bubbles
-                structure_inequality = false
+            if d1 != d3 && no_bubbles
+                reflection_equality = false
+            end
+
+            d3 = copy(d2)
+            d3.nodes[1] = ver_reflection(d3.nodes[1])
+            if d1 != d3 && no_bubbles
+                reflection_equality = false
+            end
+
+            d3 = copy(d2)
+            d3.nodes[1] = rotate(d3.nodes[1])
+            if d1 != d3 && no_bubbles
+                rotation_equality = false
             end
 
             d3 = copy(d2)
@@ -268,11 +307,26 @@ end
                     permutation_equality = false
                 end
             end
+
+            # Test boundary legs permutation equality
+            d3 = copy(d1)
+            for side in keys(d3.boundary_legs)
+                if length(d3.boundary_legs[side]) > 1
+                    perm = randperm(length(d3.boundary_legs[side]))
+                    d3.boundary_legs[side] = d3.boundary_legs[side][perm]
+                    d3.boundary_legs_posidx[side] = d3.boundary_legs_posidx[side][perm]
+                end
+            end
+            if d1 != d3 && no_bubbles
+                boundary_legs_permutation_equality = false
+            end
         end
 
+        d1 = generate_random_tensor_diagram(boundary_legs_num; max_nodes_num=max_nodes_num, max_leg_num=max_leg_num)
         d2 = copy(d1)
         success = add_random_dangling_indices!(d2; max_num_dangling=3)
         if success
+            dangling_indices_break_equality = true
             if d1 == d2
                 dangling_indices_break_equality = false
             end
@@ -282,10 +336,12 @@ end
     @test reflexivity
     @test copy_equality
     @test unknown_label_equality
-    @test structure_inequality
+    @test reflection_equality
+    @test rotation_equality
     @test label_inequality
     @test relabeling_equality
     @test permutation_equality
+    @test boundary_legs_permutation_equality
     @test dangling_indices_break_equality
 
     println("\nTest encountered $bubble_counter of bubbles in $N experiments\n")
@@ -377,5 +433,56 @@ end
     @test reflect_throws_for_incorrect_dir
 end
 
+@testset "NODE ROTATIONS                  " begin
+    # Tests that rotating 4 times (k=1 each time) restores the original node.
+    rotation_cycle_1 = true
+    # Tests that rotating with k=4 restores the original node.
+    rotation_cycle_4 = true
+    # Tests that legs are permuted correctly under 90 degree rotation (k=1).
+    legs_permutation_rot = true
 
-@testset "COMPUTING M MATRICES                " begin end
+    N = 1000
+    for _ = 1:N
+        necessary_labels = rand(INFINITE_LABELS ∪ FINITE_LABELS, rand(0:2))
+        T1 = generate_random_tensor_node(rand(1:20), "T"; max_num_of_allowed_rnd_labels=rand(4:1000), necessary_labels=necessary_labels)
+
+        # 1. Check rotating 4 times with k=1
+        T_rot_4_times = rotate(rotate(rotate(rotate(T1))))
+        if T1 != T_rot_4_times
+            rotation_cycle_1 = false
+        end
+
+        # 2. Check rotating once with k=4
+        T_rot_k4 = rotate(T1, 4)
+        if T1 != T_rot_k4
+            rotation_cycle_4 = false
+        end
+
+        # 3. Check leg permutation logic for k=1
+        T_rot = rotate(T1, 1)
+
+        # Expected mapping:
+        # new["left"] = old["top"]
+        # new["bottom"] = reverse(old["left"])
+        # new["right"] = old["bottom"]
+        # new["top"] = reverse(old["right"])
+
+        if get(T_rot.legs, "left", Int[]) != get(T1.legs, "top", Int[])
+            legs_permutation_rot = false
+        end
+        if get(T_rot.legs, "bottom", Int[]) != reverse(get(T1.legs, "left", Int[]))
+            legs_permutation_rot = false
+        end
+        if get(T_rot.legs, "right", Int[]) != get(T1.legs, "bottom", Int[])
+            legs_permutation_rot = false
+        end
+        if get(T_rot.legs, "top", Int[]) != reverse(get(T1.legs, "right", Int[]))
+            legs_permutation_rot = false
+        end
+    end
+
+    @test rotation_cycle_1
+    @test rotation_cycle_4
+    @test legs_permutation_rot
+end
+
