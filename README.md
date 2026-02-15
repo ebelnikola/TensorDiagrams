@@ -1,6 +1,6 @@
 # TensorDiagrams.jl
 
-> **⚠️ This package is under development. APIs may change without notice.**
+> **⚠️ This package is under development. There could be bugs and APIs may change without notice.**
 
 A Julia package for constructing, manipulating, and processing tensor network diagrams. In this package, a diagram is a standard tensor network diagram with optional label decorations on the legs, specifying which vector subspace each leg lives in. TensorDiagrams provides a representation of diagrams with support for geometric transformations, diagram composition, and code generation.
 
