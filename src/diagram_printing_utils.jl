@@ -8,7 +8,7 @@
 # topic 0: EXPORTS 
 #################################################
 
-export pretty_print
+export pretty_print, pretty_format
 
 #################################################
 # topic 1: PRINTING UTILS 

@@ -1,6 +1,6 @@
 # TensorDiagrams.jl
 
-> **⚠️ This package is under development. There could be bugs and APIs may change without notice.**
+> **⚠️ This package is under development. There could be bugs and APIs may change without notice. We also don't provide decent documentation at this stage replacing it with a minimal example in the example folder.**
 
 A Julia package for constructing, manipulating, and processing tensor network diagrams. In this package, a diagram is a standard tensor network diagram with optional label decorations on the legs, specifying which vector subspace each leg lives in. TensorDiagrams provides a representation of diagrams with support for geometric transformations, diagram composition, and code generation.
 
@@ -33,37 +33,8 @@ A `TensorDiagram` represents a complete tensor network with:
 - A contraction pattern (ncon-style indexing)
 - Boundary legs connecting to external indices
 - Labels indicating vector subspaces
+- A scalar factor by which the contraction result should be multiplied
 
-## Features
-
-### Geometric Transformations
-```julia
-# Reflect a node or diagram
-reflected_node = hor_reflection(node)
-reflected_diag = reflect(diagram; dir="vertical")
-
-# Rotate by 90° increments
-rotated_node = rotate(node, k)  # k times counter-clockwise
-rotated_diag = rotate(diagram, 2)  # 180° rotation
-```
-
-### Diagram Composition
-```julia
-# Glue two diagrams along specified sides
-combined = glue_diagrams(diag1, diag2, ["right", "left"])
-```
-
-### Code Generation
-```julia
-# Generate @tensoropt contraction code
-code = diagram_to_code(diagram; result_name="result")
-```
-
-### Diagram Standardization
-```julia
-# Convert to canonical form for equality comparison
-std_diag, success = standardize_diagram(diagram)
-```
 
 ## Installation
 

@@ -141,6 +141,11 @@ function rotate(diag::TensorDiagram, k::Int=1)
         diag_r.boundary_slots_num = rotate_boundary_scalars_ccw(diag_r.boundary_slots_num)
         diag_r.boundary_legs = rotate_boundary_vectors_ccw(diag_r.boundary_legs)
         diag_r.boundary_legs_posidx = rotate_boundary_vectors_ccw(diag_r.boundary_legs_posidx)
+        for side in ["top", "bottom"]
+            if haskey(diag_r.boundary_legs_posidx, side)
+                diag_r.boundary_legs_posidx[side] = diag_r.boundary_slots_num[side] .- diag_r.boundary_legs_posidx[side] .+ 1
+            end
+        end
 
         # 3. Swap width/height
         diag_r.width, diag_r.height = diag_r.height, diag_r.width
