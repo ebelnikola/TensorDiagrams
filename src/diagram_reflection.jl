@@ -9,7 +9,7 @@
 # topic 0: EXPORTS
 #########################################################
 
-export reflect, unreflect
+export reflect, unreflect, hor_reflection, ver_reflection
 
 #########################################################
 # topic 1: REFLECTION (NODE)
@@ -189,4 +189,10 @@ function reflect(diag::TensorDiagram; dir="vertical")
     end
 
     return diag_r
+end
+function hor_reflection(diag::TensorDiagram)
+    return reflect(diag; dir="horizontal")
+end
+function ver_reflection(diag::TensorDiagram)
+    return reflect(diag; dir="vertical")
 end
