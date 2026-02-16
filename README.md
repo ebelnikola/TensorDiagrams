@@ -58,7 +58,7 @@ FINITE_LABELS:
 
 The package differentiates between two classes of subspaces:
 - **Infinite subspaces** - rendered with red colored legs in visualizations
-- **Finite subspaces** - rendered with green colored legs in visualizations
+- **Finite subspaces** - rendered with blue colored legs in visualizations
 
 This distinction is useful for rigorous analysis of tensor networks. 
 
