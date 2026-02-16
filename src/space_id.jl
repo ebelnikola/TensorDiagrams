@@ -2,6 +2,7 @@
 # TOC
 # topic 0:         EXPORTS
 # topic 1:         SPACE ID DEFINITION AND UTILS
+# topic 2:         SPACE ID TO LAYOUT AND SPACE
 #################################################
 
 ##################################################
@@ -9,6 +10,7 @@
 ##################################################
 
 export SpaceID, string_to_space_id, is_valid_space_id, get_space_id, @sid_str
+export space_ids_to_layout, space_id_to_space
 
 ##################################################
 # topic 1: SPACE ID DEFINITION AND UTILS
@@ -132,3 +134,68 @@ function get_space_id(diag; side="top")
     return SpaceID(legs_labels, legs_posidx, slots_number)
 end
 
+
+##################################################
+# topic 2: SPACE ID TO LAYOUT AND SPACE
+##################################################
+
+"""
+    space_ids_to_layout(space_ids; space_dims_dict::Dict{String,Int})
+
+Generate a layout mapping for a set of space IDs. Each space ID is assigned a unique range of indices.
+
+# Arguments
+- `space_ids`: A collection of space identifiers (`SpaceID` objects).
+- `space_dims_dict`: A dictionary mapping space labels to their dimensions.
+
+# Returns
+- A dictionary mapping each space ID to a `UnitRange{Int}` representing its location in the layout.
+"""
+function space_ids_to_layout(space_ids; space_dims_dict::Dict{String,Int})
+    space_layout = Dict{SpaceID,UnitRange{Int}}()
+    cnt = 1
+    for space_id in space_ids
+        local_finite_labels = Set(keys(space_dims_dict) ∩ space_id.labels)
+
+        powers = Dict(space => count(==(space), space_id.labels) for space in local_finite_labels)
+
+        dim = prod(space_dims_dict[space]^powers[space] for space in local_finite_labels; init=1)
+
+        space_layout[space_id] = cnt:(cnt+dim-1)
+        cnt += dim
+    end
+    space_layout
+end
+
+import TensorKit: ⊗, one
+
+"""
+    space_id_to_space(space_id::SpaceID; spaces_dict)
+
+Construct the product space corresponding to the finite-dimensional labels in `space_id`.
+The labels are ordered by their position index (`posidx`) and mapped to spaces using `spaces_dict`.
+
+# Arguments
+- `space_id::SpaceID`: The space ID to convert.
+- `spaces_dict`: A dictionary mapping space labels to TensorKit space objects.
+
+# Returns
+- A TensorKit space object representing the product space.
+"""
+function space_id_to_space(space_id::SpaceID; spaces_dict)
+    # Sort labels by position index
+    perm = sortperm(space_id.posidx)
+    sorted_labels = space_id.labels[perm]
+
+    # Map to spaces using spaces_dict (only those present in the dict)
+    spaces = [spaces_dict[lbl] for lbl in sorted_labels if haskey(spaces_dict, lbl)]
+
+    if isempty(spaces)
+        if isempty(spaces_dict)
+            error("Cannot determine unit space: spaces_dict is empty.")
+        end
+        return one(first(values(spaces_dict)))
+    end
+
+    return reduce(⊗, spaces)
+end
