@@ -166,7 +166,7 @@ end
 ##################################################
 
 """
-    space_ids_to_layout(space_ids; space_dims_dict::Dict{String,Int})
+    space_ids_to_layout(space_ids, space_dims_dict::Dict{String,Int})
 
 Generate a layout mapping for a set of space IDs. Each space ID is assigned a unique range of indices.
 
@@ -177,7 +177,7 @@ Generate a layout mapping for a set of space IDs. Each space ID is assigned a un
 # Returns
 - A dictionary mapping each space ID to a `UnitRange{Int}` representing its location in the layout.
 """
-function space_ids_to_layout(space_ids; space_dims_dict::Dict{String,Int})
+function space_ids_to_layout(space_ids, space_dims_dict::Dict{String,Int})
     space_layout = Dict{SpaceID,UnitRange{Int}}()
     cnt = 1
     for space_id in space_ids
@@ -195,7 +195,7 @@ end
 
 import TensorKit: sectors, dim, Sector, fuse, ElementarySpace
 """
-    space_ids_to_layout(space_ids; spaces_dict::Dict{String,ElementarySpace})
+    space_ids_to_layout(space_ids, spaces_dict::Dict{String,<:ElementarySpace})
 
 Generate a layout mapping for a set of space IDs using TensorKit spaces. 
 Each space ID is assigned a dictionary mapping each irrep (Sector) in the fused space to its range of indices.
@@ -207,7 +207,7 @@ Each space ID is assigned a dictionary mapping each irrep (Sector) in the fused 
 # Returns
 - A dictionary mapping each `SpaceID` to a `Dict{Sector, UnitRange{Int}}`.
 """
-function space_ids_to_layout(space_ids; spaces_dict::Dict{String,ElementarySpace})
+function space_ids_to_layout(space_ids, spaces_dict::Dict{String,<:ElementarySpace})
 
     S = sectortype(first(values(spaces_dict)))
 
@@ -244,7 +244,7 @@ end
 import TensorKit: ⊗, one
 
 """
-    space_id_to_space(space_id::SpaceID; spaces_dict)
+    space_id_to_space(space_id::SpaceID; spaces_dict::Dict{String,<:ElementarySpace})
 
 Construct the tensor product space for the labels in `space_id` that are present in `spaces_dict`.
 The labels are ordered by their position index (`posidx`) and mapped to spaces using `spaces_dict`.
@@ -257,7 +257,7 @@ Labels not found in `spaces_dict` (e.g. infinite-dimensional labels) are skipped
 # Returns
 - A TensorKit space object representing the product space.
 """
-function space_id_to_space(space_id::SpaceID; spaces_dict)
+function space_id_to_space(space_id::SpaceID; spaces_dict::Dict{String,<:ElementarySpace})
     # Sort labels by position index
     perm = sortperm(space_id.posidx)
     sorted_labels = space_id.labels[perm]
