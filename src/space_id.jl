@@ -193,7 +193,7 @@ function space_ids_to_layout(space_ids; space_dims_dict::Dict{String,Int})
     space_layout
 end
 
-import TensorKit: sectors, dim, Sector, fuse
+import TensorKit: sectors, dim, Sector, fuse, ElementarySpace
 """
     space_ids_to_layout(space_ids; spaces_dict::Dict{String,ElementarySpace})
 
