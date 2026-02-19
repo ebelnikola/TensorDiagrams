@@ -289,6 +289,7 @@ function standardize_diagram(diagram::TensorDiagram)
     perm = sortperm(standard_diag.contraction_pattern)
     standard_diag.nodes = standard_diag.nodes[perm]
     standard_diag.contraction_pattern = standard_diag.contraction_pattern[perm]
+    standard_diag.node_coordinates = standard_diag.node_coordinates[perm]
 
     return standard_diag, success
 end
