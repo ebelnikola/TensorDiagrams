@@ -40,10 +40,6 @@ function ==(sid1::SpaceID, sid2::SpaceID)
     return sid1.labels == sid2.labels && sid1.posidx == sid2.posidx && sid1.slots_number == sid2.slots_number
 end
 
-import Base: hash
-function hash(sid::SpaceID, h::UInt)
-    return hash(string(sid), h)
-end
 
 function Base.string(sid::SpaceID)
     slots = fill("-", sid.slots_number)
@@ -59,6 +55,11 @@ end
 
 function Base.show(io::IO, sid::SpaceID)
     print(io, "sid:" * string(sid))
+end
+
+import Base: hash
+function hash(sid::SpaceID, h::UInt)
+    return hash(string(sid), h)
 end
 
 """
