@@ -29,17 +29,21 @@ Identifies a vector space on a boundary of a tensor diagram.
 Use [`string_to_space_id`](@ref) or the `sid"..."` string macro to construct from a string representation,
 where labels occupy positions and `'-'` denotes an empty slot (e.g. `sid"z-q"`).
 """
-struct SpaceID
-    labels::Vector{String}
-    posidx::Vector{Int}
+struct SpaceID{N}
+    labels::NTuple{N,String}
+    posidx::NTuple{N,Int}
     slots_number::Int
+
+    function SpaceID(labels, posidx, slots_number)
+        p = sortperm([posidx...])
+        new{length(labels)}(Tuple(labels[p]), Tuple(posidx[p]), slots_number)
+    end
 end
 
 import Base: ==
 function ==(sid1::SpaceID, sid2::SpaceID)
     return sid1.labels == sid2.labels && sid1.posidx == sid2.posidx && sid1.slots_number == sid2.slots_number
 end
-
 
 function Base.string(sid::SpaceID)
     slots = fill("-", sid.slots_number)
@@ -260,7 +264,7 @@ Labels not found in `spaces_dict` (e.g. infinite-dimensional labels) are skipped
 """
 function space_id_to_space(space_id::SpaceID; spaces_dict::Dict{String,<:ElementarySpace})
     # Sort labels by position index
-    perm = sortperm(space_id.posidx)
+    perm = sortperm([space_id.posidx...])
     sorted_labels = space_id.labels[perm]
 
     # Map to spaces using spaces_dict (only those present in the dict)
