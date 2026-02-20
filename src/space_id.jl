@@ -42,7 +42,7 @@ end
 
 import Base: hash
 function hash(sid::SpaceID, h::UInt)
-    return hash(sid.slots_number, hash(sid.posidx, hash(sid.labels, h)))
+    return hash(string(sid), h)
 end
 
 function Base.string(sid::SpaceID)
