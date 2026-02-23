@@ -246,7 +246,7 @@ function space_ids_to_layout(space_ids, spaces_dict::Dict{String,<:ElementarySpa
     return space_layout
 end
 
-import TensorKit: ⊗, one
+import TensorKit: ⊗, one, ProductSpace
 
 """
     space_id_to_space(space_id::SpaceID; spaces_dict::Dict{String,<:ElementarySpace})
@@ -262,22 +262,15 @@ Labels not found in `spaces_dict` (e.g. infinite-dimensional labels) are skipped
 # Returns
 - A TensorKit space object representing the product space.
 """
-function space_id_to_space(space_id::SpaceID; spaces_dict::Dict{String,<:ElementarySpace})
+function space_id_to_space(space_id::SpaceID; spaces_dict::Dict{String,S}) where {S<:ElementarySpace}
     # Sort labels by position index
     perm = sortperm([space_id.posidx...])
     sorted_labels = space_id.labels[perm]
 
     # Map to spaces using spaces_dict (only those present in the dict)
-    spaces = [spaces_dict[lbl] for lbl in sorted_labels if haskey(spaces_dict, lbl)]
+    spaces = S[spaces_dict[lbl] for lbl in sorted_labels if haskey(spaces_dict, lbl)]
 
-    if isempty(spaces)
-        if isempty(spaces_dict)
-            error("Cannot determine unit space: spaces_dict is empty.")
-        end
-        return one(first(values(spaces_dict)))
-    end
-
-    return reduce(⊗, spaces)
+    return reduce(⊗, spaces)::ProductSpace{S,length(spaces)}
 end
 
 """
