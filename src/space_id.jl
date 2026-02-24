@@ -270,7 +270,7 @@ function space_id_to_space(space_id::SpaceID; spaces_dict::Dict{String,S}) where
     # Map to spaces using spaces_dict (only those present in the dict)
     spaces = S[spaces_dict[lbl] for lbl in sorted_labels if haskey(spaces_dict, lbl)]
 
-    return reduce(⊗, spaces)::ProductSpace{S,length(spaces)}
+    return reduce(⊗, spaces)
 end
 
 """
