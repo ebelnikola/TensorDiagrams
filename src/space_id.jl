@@ -29,14 +29,14 @@ Identifies a vector space on a boundary of a tensor diagram.
 Use [`string_to_space_id`](@ref) or the `sid"..."` string macro to construct from a string representation,
 where labels occupy positions and `'-'` denotes an empty slot (e.g. `sid"z-q"`).
 """
-struct SpaceID{N}
-    labels::NTuple{N,String}
-    posidx::NTuple{N,Int}
+struct SpaceID
+    labels::NTuple{N,String} where N
+    posidx::NTuple{N,Int} where N
     slots_number::Int
 
     function SpaceID(labels, posidx, slots_number)
         p = sortperm([posidx...])
-        new{length(labels)}(Tuple(labels[p]), Tuple(posidx[p]), slots_number)
+        new(Tuple(labels[p]), Tuple(posidx[p]), slots_number)
     end
 end
 
