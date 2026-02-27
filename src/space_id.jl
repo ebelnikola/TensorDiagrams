@@ -10,7 +10,7 @@
 ##################################################
 
 export SpaceID, string_to_space_id, is_valid_space_id, get_space_id, @sid_str
-export space_ids_to_layout, space_id_to_space, space_id_to_dim
+export space_ids_to_layout, space_id_to_space, space_id_to_dim, get_outer_sid, get_sids_of
 
 ##################################################
 # topic 1: SPACE ID DEFINITION AND UTILS
@@ -249,7 +249,7 @@ end
 import TensorKit: ⊗, one, ProductSpace
 
 """
-    space_id_to_space(space_id::SpaceID; spaces_dict::Dict{String,<:ElementarySpace})
+    space_id_to_space(space_id::SpaceID; spaces_dict::Dict{String,<:ElementarySpace}) 
 
 Construct the tensor product space for the labels in `space_id` that are present in `spaces_dict`.
 The labels are ordered by their position index (`posidx`) and mapped to spaces using `spaces_dict`.
@@ -262,15 +262,12 @@ Labels not found in `spaces_dict` (e.g. infinite-dimensional labels) are skipped
 # Returns
 - A TensorKit space object representing the product space.
 """
-function space_id_to_space(space_id::SpaceID; spaces_dict::Dict{String,S}) where {S<:ElementarySpace}
-    # Sort labels by position index
-    perm = sortperm([space_id.posidx...])
-    sorted_labels = space_id.labels[perm]
-
-    # Map to spaces using spaces_dict (only those present in the dict)
-    spaces = S[spaces_dict[lbl] for lbl in sorted_labels if haskey(spaces_dict, lbl)]
-
-    return reduce(⊗, spaces)
+#function space_id_to_space(space_id::SpaceID; spaces_dict::Dict{String,<:ElementarySpace})
+#    # Map to spaces using spaces_dict (only those present in the dict)
+#    return convert(ProductSpace, prod(spaces_dict[lbl] for lbl in space_id.labels if haskey(spaces_dict, lbl)))::ProductSpace{valtype(spaces_dict)}
+#end
+function space_id_to_space(space_id::SpaceID; spaces_dict::Dict{String,Int})
+    return Int[(spaces_dict[lbl] for lbl in space_id.labels if haskey(spaces_dict, lbl))...]
 end
 
 """
@@ -296,5 +293,24 @@ space_id_to_dim(sid; dims_dict=Dict("z" => 2, "q" => 8))  # 2 * 8 * 2 = 32
 ```
 """
 function space_id_to_dim(space_id::SpaceID; dims_dict)
-    prod([dims_dict[lbl] for lbl in space_id.labels if haskey(dims_dict, lbl)])
+    prod(dims_dict[lbl] for lbl in space_id.labels if haskey(dims_dict, lbl))
+end
+
+
+function get_outer_sid(diag, boundary_processing_tree)
+    string_to_space_id(
+        join((x -> x[2]).(sort([boundary_processing_tree["left"][get_space_id(diag, side="left")],
+                boundary_processing_tree["top"][get_space_id(diag, side="top")],
+                boundary_processing_tree["right"][get_space_id(diag, side="right")],
+                boundary_processing_tree["bottom"][get_space_id(diag, side="bottom")]], by=x -> x[1]))))
+end
+
+function get_sids_of(diag, node_name)
+    loc = findall(==(node_name), [node.name for node in diag.nodes])
+    res = SpaceID[]
+    for i in loc
+        patt = diag.contraction_pattern[i]
+        push!(res, string_to_space_id(join([diag.labels[p] for p in patt])))
+    end
+    return res
 end
