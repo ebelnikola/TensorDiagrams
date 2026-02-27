@@ -297,12 +297,9 @@ function space_id_to_dim(space_id::SpaceID; dims_dict)
 end
 
 
-function get_outer_sid(diag, boundary_processing_tree)
+function get_outer_sid(diag, boundary_processing_tree, sides=["left", "top", "right", "bottom"])
     string_to_space_id(
-        join((x -> x[2]).(sort([boundary_processing_tree["left"][get_space_id(diag, side="left")],
-                boundary_processing_tree["top"][get_space_id(diag, side="top")],
-                boundary_processing_tree["right"][get_space_id(diag, side="right")],
-                boundary_processing_tree["bottom"][get_space_id(diag, side="bottom")]], by=x -> x[1]))))
+        join((x -> x[2]).(sort([boundary_processing_tree[side][get_space_id(diag, side=side)] for side in sides], by=x -> x[1]))))
 end
 
 function get_sids_of(diag, node_name)
