@@ -266,7 +266,14 @@ Labels not found in `spaces_dict` (e.g. infinite-dimensional labels) are skipped
 #    # Map to spaces using spaces_dict (only those present in the dict)
 #    return convert(ProductSpace, prod(spaces_dict[lbl] for lbl in space_id.labels if haskey(spaces_dict, lbl)))::ProductSpace{valtype(spaces_dict)}
 #end
-function space_id_to_space(space_id::SpaceID; spaces_dict::Dict{String,Int})
+#=function space_id_to_space(space_id::SpaceID; spaces_dict::Dict{String,Int})
+    return Int[(spaces_dict[lbl] for lbl in space_id.labels if haskey(spaces_dict, lbl))...]
+end=#
+function space_id_to_space(space_id::SpaceID, spaces_dict::Dict{String,<:ElementarySpace})
+    # Map to spaces using spaces_dict (only those present in the dict)
+    return convert(ProductSpace, prod(spaces_dict[lbl] for lbl in space_id.labels if haskey(spaces_dict, lbl)))::ProductSpace{valtype(spaces_dict)}
+end
+function space_id_to_space(space_id::SpaceID, spaces_dict::Dict{String,Int})
     return Int[(spaces_dict[lbl] for lbl in space_id.labels if haskey(spaces_dict, lbl))...]
 end
 
