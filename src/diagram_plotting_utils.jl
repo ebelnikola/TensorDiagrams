@@ -8,16 +8,16 @@
 #################################################
 
 #################################################
-# topic 0: EXPORTS AND IMPORTS  
+# topic 0: EXPORTS AND IMPORTS
 #################################################
 
 export plot_tensor_node, plot_tensor_node_list, plot_tensor_diagram, display_scrollable_figures
 
-using CairoMakie
+using Makie
 using NetworkLayout
 
 #################################################
-# topic 1: PLOTTING LEG MARKERS ALONG SEGMENTS  
+# topic 1: PLOTTING LEG MARKERS ALONG SEGMENTS
 #################################################
 
 """
@@ -77,7 +77,7 @@ function draw_legs_on_segment!(ax, start_coordinates, end_coordinates, n_slots_t
 end
 
 #################################################
-# topic 2: PLOTTING TENSOR NODES 
+# topic 2: PLOTTING TENSOR NODES
 #################################################
 
 """
@@ -150,7 +150,7 @@ end
 """
     draw_tensor_node!(ax, node::TensorNode, center_x=0.0, center_y=0.0, width=nothing; leg_fontsize=14, strokewidth=2, name_fontsize=28)
 
-Draw a TensorNode on the given axis at a specified position and scale. 
+Draw a TensorNode on the given axis at a specified position and scale.
 Leg colors are determined by the `dual` and `flipped` fields of the node (green for "in", red for "out" / dual).
 
 Arguments
@@ -305,6 +305,14 @@ function Base.show(io::IO, m::Union{MIME"image/png",MIME"image/svg+xml"}, node::
     show(io, m, fig)
 end
 
+function Base.display(d::AbstractDisplay, node::TensorNode)
+    display(d, plot_tensor_node(node))
+end
+
+function Base.display(node::TensorNode)
+    display(plot_tensor_node(node))
+end
+
 """
     plot_tensor_node_list(nodes; cols=3, scale=1.0, size=(900, 600))
 
@@ -350,7 +358,7 @@ end
 
 
 #################################################
-# topic 3: PLOTTING TENSOR DIAGRAMS 
+# topic 3: PLOTTING TENSOR DIAGRAMS
 #################################################
 
 """
@@ -760,6 +768,14 @@ function Base.show(io::IO, m::Union{MIME"image/png",MIME"image/svg+xml"}, node::
     show(io, m, fig)
 end
 
+function Base.display(d::AbstractDisplay, diag::TensorDiagram)
+    display(d, plot_tensor_diagram(diag))
+end
+
+function Base.display(diag::TensorDiagram)
+    display(plot_tensor_diagram(diag))
+end
+
 #################################################
 # topic 4: DISPLAY UTILITIES
 #################################################
@@ -771,7 +787,7 @@ Display lists of figures side-by-side in a single scrollable container using a g
 This is useful for comparing sequences of diagrams or plots in Jupyter notebooks.
 
 # Arguments
-- `figure_lists...`: Variable number of lists (Vectors) containing figures to be displayed. All lists must have the same length. 
+- `figure_lists...`: Variable number of lists (Vectors) containing figures to be displayed. All lists must have the same length.
 - `max_height`: String specifying the maximum height of the scrollable area (default: "500px").
 
 # Details

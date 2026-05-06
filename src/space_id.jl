@@ -27,7 +27,7 @@ Identifies a vector space on a boundary of a tensor diagram.
 - `slots_number::Int`: Total number of slots on the boundary (including empty ones).
 
 Use [`string_to_space_id`](@ref) or the `sid"..."` string macro to construct from a string representation,
-where labels occupy positions and `'-'` denotes an empty slot (e.g. `sid"z-q"`).
+where labels occupy positions and `'-'` denotes an empty slot (e.g. `sid"z - q"`).
 """
 struct SpaceID
     labels::NTuple{N,String} where N
@@ -54,7 +54,7 @@ function Base.string(sid::SpaceID)
             @warn "Label $label at position $pos is out of bounds for SpaceID with $(sid.slots_number) slots."
         end
     end
-    return join(slots)
+    return join(slots, " ")
 end
 
 function Base.show(io::IO, sid::SpaceID)
@@ -70,13 +70,12 @@ end
     string_to_space_id(s::String) -> SpaceID
 
 Parse a string representation into a `SpaceID`.
-Labels are matched greedily (longest first) from the set of valid labels (`FINITE_LABELS ∪ INFINITE_LABELS`).
-A `'-'` character denotes an empty slot.
+Tokens are space-separated; each token is either a valid label or `'-'` for an empty slot.
 
 # Examples
 ```julia
-string_to_space_id("z-q")   # labels=["z","q"], posidx=[1,3], slots_number=3
-string_to_space_id("zz")    # labels=["z","z"], posidx=[1,2], slots_number=2
+string_to_space_id("z - q")   # labels=["z","q"], posidx=[1,3], slots_number=3
+string_to_space_id("z z")     # labels=["z","z"], posidx=[1,2], slots_number=2
 ```
 """
 function string_to_space_id(s)
@@ -84,41 +83,21 @@ function string_to_space_id(s)
     posidx = Int[]
 
     valid_labels = union(FINITE_LABELS, INFINITE_LABELS)
-    # Sort valid_labels by length descending to match longest first (e.g. z' before z)
-    sorted_valid_labels = sort(collect(valid_labels), by=length, rev=true)
+    tokens = split(s, ' ')
 
-    current_pos = 1
-    i = 1 # char index in string
-    str_len = length(s)
-
-    while i <= str_len
-        if s[i] == '-'
-            # Empty slot
-            current_pos += 1
-            i += 1
+    for (i, token) in enumerate(tokens)
+        token = String(token)
+        if token == "-"
             continue
-        end
-
-        # Try to match a label
-        matched = false
-        for lbl in sorted_valid_labels
-            len = length(lbl)
-            if i + len - 1 <= str_len && s[i:i+len-1] == lbl
-                push!(labels, lbl)
-                push!(posidx, current_pos)
-                current_pos += 1
-                i += len
-                matched = true
-                break
-            end
-        end
-
-        if !matched
-            error("Could not parse SpaceID from string '$s': invalid character/label at index $i")
+        elseif token in valid_labels
+            push!(labels, token)
+            push!(posidx, i)
+        else
+            error("Could not parse SpaceID from string '$s': invalid token '$token' at position $i")
         end
     end
 
-    return SpaceID(labels, posidx, current_pos - 1)
+    return SpaceID(labels, posidx, length(tokens))
 end
 
 """
@@ -202,7 +181,7 @@ import TensorKit: sectors, dim, Sector, fuse, ElementarySpace, sectortype
 """
     space_ids_to_layout(space_ids, spaces_dict::Dict{String,<:ElementarySpace})
 
-Generate a layout mapping for a set of space IDs using TensorKit spaces. 
+Generate a layout mapping for a set of space IDs using TensorKit spaces.
 Each space ID is assigned a dictionary mapping each irrep (Sector) in the fused space to its range of indices.
 
 # Arguments
@@ -249,7 +228,7 @@ end
 import TensorKit: ⊗, one, ProductSpace
 
 """
-    space_id_to_space(space_id::SpaceID; spaces_dict::Dict{String,<:ElementarySpace}) 
+    space_id_to_space(space_id::SpaceID; spaces_dict::Dict{String,<:ElementarySpace})
 
 Construct the tensor product space for the labels in `space_id` that are present in `spaces_dict`.
 The labels are ordered by their position index (`posidx`) and mapped to spaces using `spaces_dict`.
@@ -271,7 +250,11 @@ Labels not found in `spaces_dict` (e.g. infinite-dimensional labels) are skipped
 end=#
 function space_id_to_space(space_id::SpaceID, spaces_dict::Dict{String,<:ElementarySpace})
     # Map to spaces using spaces_dict (only those present in the dict)
-    return convert(ProductSpace, prod(spaces_dict[lbl] for lbl in space_id.labels if haskey(spaces_dict, lbl)))::ProductSpace{valtype(spaces_dict)}
+    spaces = (spaces_dict[lbl] for lbl in space_id.labels if haskey(spaces_dict, lbl))
+    if isempty(spaces)
+        return convert(ProductSpace, zero(valtype(spaces_dict)))::ProductSpace{valtype(spaces_dict)}
+    end
+    return convert(ProductSpace, prod(spaces))::ProductSpace{valtype(spaces_dict)}
 end
 function space_id_to_space(space_id::SpaceID, spaces_dict::Dict{String,Int})
     return Int[(spaces_dict[lbl] for lbl in space_id.labels if haskey(spaces_dict, lbl))...]
@@ -295,7 +278,7 @@ accounting for multiplicity (repeated labels contribute multiple factors).
 
 # Examples
 ```julia
-sid = string_to_space_id("zqz")
+sid = string_to_space_id("z q z")
 space_id_to_dim(sid; dims_dict=Dict("z" => 2, "q" => 8))  # 2 * 8 * 2 = 32
 ```
 """
@@ -306,7 +289,7 @@ end
 
 function get_outer_sid(diag, boundary_processing_tree, sides=["left", "top", "right", "bottom"])
     string_to_space_id(
-        join((x -> x[2]).(sort([boundary_processing_tree[side][get_space_id(diag, side=side)] for side in sides], by=x -> x[1]))))
+        join((x -> x[2]).(sort([boundary_processing_tree[side][get_space_id(diag, side=side)] for side in sides], by=x -> x[1])), " "))
 end
 
 function get_sids_of(diag, node_name)
@@ -314,7 +297,7 @@ function get_sids_of(diag, node_name)
     res = SpaceID[]
     for i in loc
         patt = diag.contraction_pattern[i]
-        push!(res, string_to_space_id(join([diag.labels[p] for p in patt])))
+        push!(res, string_to_space_id(join([diag.labels[p] for p in patt], " ")))
     end
     return res
 end

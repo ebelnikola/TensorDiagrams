@@ -153,7 +153,7 @@ end
 Renames the indices of a TensorDiagram based on its topology to a canonical form.
 1. Boundary indices are renamed to -1, -2, ... based on their position (Left boundary: Bottom->Top, Top boundary: Left->Right, Right boundary: Bottom->Top, Bottom boundary: Left->Right).
 2. Internal indices are renamed to 1, 2, ... based on a traversal starting from the new -1 boundary index.
-3. Boundary indices are stored in the order of their position indices. 
+3. Boundary indices are stored in the order of their position indices.
 4. Missing labels are populated with "?".
 5. Nodes and contraction patterns are sorted based on the contraction pattern.
 
@@ -289,8 +289,8 @@ function standardize_diagram(diagram::TensorDiagram)
     perm = sortperm(standard_diag.contraction_pattern)
     standard_diag.nodes = standard_diag.nodes[perm]
     standard_diag.contraction_pattern = standard_diag.contraction_pattern[perm]
-    standard_diag.node_coordinates = standard_diag.node_coordinates[perm]
-
+    if !isnothing(standard_diag.node_coordinates)
+        standard_diag.node_coordinates = standard_diag.node_coordinates[perm]
+    end
     return standard_diag, success
 end
-
