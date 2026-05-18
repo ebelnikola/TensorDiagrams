@@ -28,21 +28,19 @@ The suffix is of the form "_flp" followed by the indices in `node.flipped` joine
 - A `String` representing the tensor name.
 """
 function form_name_with_flips(node::TensorNode)
+    prime = ""
+    if node.adjoint
+        node = adjoint(node)[1]
+        prime = "'"
+    end
+
     tensor_name = node.name
 
     flipped_legs_ind = findall(node.flipped)
-
     if !isempty(flipped_legs_ind)
-        if endswith(tensor_name, "'")
-            tensor_name = tensor_name[1:end-1]
-            tensor_name *= "_flp_" * join(flipped_legs_ind, "_")
-            tensor_name *= "'"
-        else
-            tensor_name *= "_flp_" * join(flipped_legs_ind, "_")
-        end
+        tensor_name *= "_flp_" * join(flipped_legs_ind, "_")
     end
-
-    return tensor_name
+    return tensor_name * prime
 end
 
 """
@@ -62,17 +60,17 @@ Generates a string representation of the contraction from the diagram using @ten
 function diagram_to_code(diag::TensorDiagram; result_name="res", order::Array{Int}=Int[], sides_order=["left", "top", "right", "bottom"], semicolon_pos=0, perm_side_based_order::Vector{Int}=Int[])
     code = "@tensoropt $result_name"
 
-    # 1. Completing the order array if needed. 
-    #    The order of legs in the final contraction, 
+    # 1. Completing the order array if needed.
+    #    The order of legs in the final contraction,
     #    if not provided, is:
     #
-    #    Left boundary legs from bottom to top, 
+    #    Left boundary legs from bottom to top,
     #    Top boundary legs from left to right,
     #    Right boundary legs from bottom to top,
-    #    Bottom boundary legs from left to right, 
-    #    
+    #    Bottom boundary legs from left to right,
+    #
     #    If custom sides_order is provided, the order of boundaries
-    #    will be taken from there, but the order of legs on each side 
+    #    will be taken from there, but the order of legs on each side
     #    remains the same as described above.
 
     if length(order) == 0

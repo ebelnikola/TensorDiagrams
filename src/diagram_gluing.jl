@@ -35,7 +35,7 @@ Glue two `TensorDiagram`s along the specified sides.
 # Arguments
 - `d1::TensorDiagram`: The first diagram.
 - `d2::TensorDiagram`: The second diagram.
-- `sides::Vector{String}`: A two-element vector specifying which sides to glue. 
+- `sides::Vector{String}`: A two-element vector specifying which sides to glue.
   For example, `["right", "left"]` glues the right side of `d1` to the left side of `d2`.
   Supported values: "left", "right", "top", "bottom".
 
@@ -53,10 +53,10 @@ function glue_diagrams(d1::TensorDiagram, d2::TensorDiagram, sides::Vector{Strin
     end
 
     # 1. Geometry and compatibility:
-    #    diagrams orientation, 
-    #    spaces compatibility, 
+    #    diagrams orientation,
+    #    spaces compatibility,
     #    dangling indices dropping,
-    #    nodes positioning 
+    #    nodes positioning
 
     # 1.1 Orientation
 
@@ -118,9 +118,9 @@ function glue_diagrams(d1::TensorDiagram, d2::TensorDiagram, sides::Vector{Strin
         vcat(coords1, coords2)
     end
 
-    # 2. Relabeling diagrams 
+    # 2. Relabeling diagrams
 
-    # 2.1 Creating generators of new indices     
+    # 2.1 Creating generators of new indices
     pattern_ind_of_d1 = unique(vcat(d1.contraction_pattern...))
     boundary_ind_of_d1 = unique(vcat(values(d1.boundary_legs)...))
     all_ind_of_d1 = unique(vcat(pattern_ind_of_d1, boundary_ind_of_d1))
@@ -142,8 +142,8 @@ function glue_diagrams(d1::TensorDiagram, d2::TensorDiagram, sides::Vector{Strin
     d2.boundary_legs_posidx[sides[2]] = d2.boundary_legs_posidx[sides[2]][perm]
 
     # 2.3. creating relabeling dicts
-    #      we need two dictionaries, one for each diagram 
-    #      for diagram d1 we relabel indices on the gluing side only, so 
+    #      we need two dictionaries, one for each diagram
+    #      for diagram d1 we relabel indices on the gluing side only, so
     #      we initialize the dictionary with idx=>idx for the rest of indices
     #      for diagram d2 we relabel all indices to avoid conflicts, so
     #      we initialize it empty
@@ -171,17 +171,17 @@ function glue_diagrams(d1::TensorDiagram, d2::TensorDiagram, sides::Vector{Strin
         end
     end
 
-    # 2.4 Applying the relabeling dicts 
+    # 2.4 Applying the relabeling dicts
     relabel!(d1, relabeling_dict_d1)
     relabel!(d2, relabeling_dict_d2)
 
-    # 3. Creating the new diagram 
+    # 3. Creating the new diagram
 
-    # 3.1 New nodes and contraction pattern 
+    # 3.1 New nodes and contraction pattern
     new_nodes = vcat(d1.nodes, d2.nodes)
     new_contraction_pattern = vcat(d1.contraction_pattern, d2.contraction_pattern)
 
-    # 3.2 New boundary legs dictionaries 
+    # 3.2 New boundary legs dictionaries
 
     # 3.2.1. removing positive indices from old boundary dictionaries
 
@@ -195,12 +195,12 @@ function glue_diagrams(d1::TensorDiagram, d2::TensorDiagram, sides::Vector{Strin
 
 
 
-    d1_pos = sides[2] # At this stage sides are necessarily different 
-    d2_pos = sides[1] # we took care of this above by rotations 
-    #                   Now, imagine sides = left, right, which means that 
+    d1_pos = sides[2] # At this stage sides are necessarily different
+    d2_pos = sides[1] # we took care of this above by rotations
+    #                   Now, imagine sides = left, right, which means that
     #                   we glue left boundary of d1 with right boundary of d2
-    #                   So, d1_pos will be in the right part of the diagram (sides[2]), 
-    #                   and d2_pos will be in the left part of the diagram (sides[1]) 
+    #                   So, d1_pos will be in the right part of the diagram (sides[2]),
+    #                   and d2_pos will be in the left part of the diagram (sides[1])
 
 
     if ishorizontal_1
@@ -242,7 +242,7 @@ function glue_diagrams(d1::TensorDiagram, d2::TensorDiagram, sides::Vector{Strin
     new_boundary_legs_posidx = Dict{String,Vector{Int}}()
 
 
-    # Now, if we do horizontal gluing (dL dR) we should shift the posidx on 
+    # Now, if we do horizontal gluing (dL dR) we should shift the posidx on
     # top and bottom sides for the diagram that will be on the right side.
     # The shift amount is the number of top/bottom slots of the left diagram.
 
@@ -256,8 +256,8 @@ function glue_diagrams(d1::TensorDiagram, d2::TensorDiagram, sides::Vector{Strin
         current_shift_2 = 0
 
         if ishorizontal_1 && (side == "top" || side == "bottom")
-            # Horizontal Gluing. 
-            # If d1 is on the LEFT (d1_pos == "left"), d2 is on the RIGHT. 
+            # Horizontal Gluing.
+            # If d1 is on the LEFT (d1_pos == "left"), d2 is on the RIGHT.
             # d2 needs to be shifted by d1's width (slots)
             if d1_pos == "left"
                 current_shift_2 = get(d1.boundary_slots_num, side, 0)
@@ -298,7 +298,7 @@ function glue_diagrams(d1::TensorDiagram, d2::TensorDiagram, sides::Vector{Strin
 
     new_factor = d1.factor == "1.0" ? d2.factor : (d2.factor == "1.0" ? d1.factor : "(" * d1.factor * "*" * d2.factor * ")")
 
-    # 3.5 New node coordinates 
+    # 3.5 New node coordinates
 
     # already computed and stored in new_coordinates
 
@@ -321,4 +321,3 @@ function glue_diagrams(d1::TensorDiagram, d2::TensorDiagram, sides::Vector{Strin
         height=new_height
     )
 end
-
